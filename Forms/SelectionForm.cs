@@ -1,4 +1,5 @@
 using System.Drawing;
+using System.Drawing.Printing;
 using System.Windows.Forms;
 using PrintFraItslearning.Printing;
 using PrintFraItslearning.Scanning;
@@ -12,6 +13,10 @@ public sealed class SelectionForm : Form
     private readonly ZipExtractor? _zip;
 
     private readonly TreeView _tree;
+    private readonly SplitContainer _split;
+    private readonly PreviewControl _preview;
+    private readonly ComboBox _printerCombo;
+    private readonly Label _printerCountLabel;
     private readonly CheckBox _headerFooterCheck;
     private readonly CheckBox _commentsCheck;
     private readonly CheckBox _excelFormulasCheck;
@@ -42,28 +47,85 @@ public sealed class SelectionForm : Form
 
         Text = "Velg hva som skal skrives ut";
         StartPosition = FormStartPosition.CenterScreen;
-        ClientSize = new Size(680, 728);
-        MinimumSize = new Size(560, 620);
+        ClientSize = new Size(900, 728);
+        MinimumSize = new Size(780, 620);
+
+        var printerLabel = new Label
+        {
+            Text = "Printer:",
+            Location = new Point(16, 15),
+            AutoSize = true,
+            Anchor = AnchorStyles.Top | AnchorStyles.Left
+        };
+        Controls.Add(printerLabel);
+
+        _printerCombo = new ComboBox
+        {
+            Location = new Point(72, 12),
+            Size = new Size(640, 24),
+            Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
+            DropDownStyle = ComboBoxStyle.DropDownList,
+            DropDownHeight = 240
+        };
+        _printerCombo.SelectedIndexChanged += (_, _) => SavePrinter();
+        Controls.Add(_printerCombo);
+
+        var refreshBtn = new Button
+        {
+            Text = "↻",
+            Location = new Point(718, 10),
+            Size = new Size(32, 28),
+            Anchor = AnchorStyles.Top | AnchorStyles.Right
+        };
+        refreshBtn.Click += (_, _) => PopulatePrinters();
+        _toolTip.SetToolTip(refreshBtn, "Hent installerte printere på nytt");
+        Controls.Add(refreshBtn);
+
+        _printerCountLabel = new Label
+        {
+            Location = new Point(72, 40),
+            Size = new Size(678, 18),
+            Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
+            ForeColor = Color.Gray,
+            Text = ""
+        };
+        Controls.Add(_printerCountLabel);
+
+        PopulatePrinters();
 
         _statusLabel = new Label
         {
             Text = "Skanner…",
-            Location = new Point(16, 12),
-            Size = new Size(648, 22),
+            Location = new Point(16, 66),
+            Size = new Size(868, 22),
             Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
         };
         Controls.Add(_statusLabel);
 
         _tree = new TreeView
         {
-            Location = new Point(16, 40),
-            Size = new Size(648, 340),
-            Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Bottom,
+            Dock = DockStyle.Fill,
             CheckBoxes = true,
             HideSelection = false
         };
         _tree.AfterCheck += Tree_AfterCheck;
-        Controls.Add(_tree);
+        _tree.AfterSelect += Tree_AfterSelect;
+        _tree.NodeMouseDoubleClick += Tree_NodeMouseDoubleClick;
+
+        _preview = new PreviewControl();
+
+        _split = new SplitContainer
+        {
+            Location = new Point(16, 94),
+            Size = new Size(868, 286),
+            Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Bottom,
+            Orientation = Orientation.Vertical,
+            SplitterDistance = 540,
+            FixedPanel = FixedPanel.None
+        };
+        _split.Panel1.Controls.Add(_tree);
+        _split.Panel2.Controls.Add(_preview);
+        Controls.Add(_split);
 
         var selectAll = new Button
         {
@@ -335,6 +397,26 @@ public sealed class SelectionForm : Form
 
     private bool _suppressCheckEvent;
 
+    private void Tree_AfterSelect(object? sender, TreeViewEventArgs e)
+    {
+        var file = e.Node?.Tag as ScannedFile;
+        _preview.Show(file);
+    }
+
+    private void Tree_NodeMouseDoubleClick(object? sender, TreeNodeMouseClickEventArgs e)
+    {
+        if (e.Node?.Tag is ScannedFile)
+        {
+            // Default checkbox-toggle som første klikk utløste — nullstill.
+            _suppressCheckEvent = true;
+            try { e.Node.Checked = !e.Node.Checked; }
+            finally { _suppressCheckEvent = false; }
+
+            _tree.SelectedNode = e.Node;
+            _preview.OpenCurrentExternally();
+        }
+    }
+
     private void Tree_AfterCheck(object? sender, TreeViewEventArgs e)
     {
         if (_suppressCheckEvent || e.Node == null) return;
@@ -483,5 +565,53 @@ public sealed class SelectionForm : Form
         if (!byFirstName) return f.FolderName;
         var student = StudentName.TryParse(f.FolderName);
         return student != null ? $"{student.Fornavn} {student.Etternavn}" : f.FolderName;
+    }
+
+    private void PopulatePrinters()
+    {
+        _printerCombo.BeginUpdate();
+        try
+        {
+            _printerCombo.Items.Clear();
+            string? defaultPrinter = null;
+            try { defaultPrinter = new PrinterSettings().PrinterName; } catch { }
+
+            var found = new List<string>();
+            try
+            {
+                foreach (string name in PrinterSettings.InstalledPrinters)
+                    found.Add(name);
+            }
+            catch { }
+
+            foreach (var name in found.OrderBy(n => n, StringComparer.OrdinalIgnoreCase))
+                _printerCombo.Items.Add(name);
+
+            var preferred = _config.Printer;
+            if (!string.IsNullOrWhiteSpace(preferred) && !_printerCombo.Items.Contains(preferred))
+                _printerCombo.Items.Insert(0, preferred);
+
+            if (!string.IsNullOrWhiteSpace(preferred))
+                _printerCombo.SelectedItem = preferred;
+            else if (defaultPrinter != null && _printerCombo.Items.Contains(defaultPrinter))
+                _printerCombo.SelectedItem = defaultPrinter;
+            else if (_printerCombo.Items.Count > 0)
+                _printerCombo.SelectedIndex = 0;
+
+            _printerCountLabel.Text = $"{found.Count} installerte printere funnet" +
+                (defaultPrinter != null ? $" (standard: {defaultPrinter})" : "");
+        }
+        finally
+        {
+            _printerCombo.EndUpdate();
+        }
+    }
+
+    private void SavePrinter()
+    {
+        var selected = _printerCombo.SelectedItem?.ToString() ?? _printerCombo.Text;
+        if (string.IsNullOrWhiteSpace(selected)) return;
+        _config.Printer = selected.Trim();
+        _config.Save();
     }
 }

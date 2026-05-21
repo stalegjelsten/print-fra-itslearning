@@ -12,6 +12,7 @@ Det er bygd som en vanlig Windows-app i C# / WinForms, distribuert som **én `.e
 - **Excel-utskrift** i liggende format med rutenett og rad-/kolonneoverskrifter. Valgfri formelvisning som ekstra ark.
 - **Kombiner alt til én PDF** — én utskriftsjobb for hele klassen. Tomme sider mellom elever ved tosidig utskrift, slik at hver elev starter på et nytt ark.
 - **Lagre kombinert PDF** til disk i stedet for (eller i tillegg til) å skrive ut.
+- **Forhåndsvisning** av markert fil (PDF, bilder, HTML, tekst) direkte i utvalgsvinduet. Dobbeltklikk åpner fila i ekstern app — nyttig for Word/Excel som ikke har innebygd forhåndsvisning.
 - **Printer-velger** med liste over alle installerte printere.
 - **Auto-update**: sjekker GitHub Releases ved oppstart og viser banner hvis nyere versjon finnes.
 - **Ingen administratorrettigheter** nødvendig — kjører som vanlig bruker, konfig i `%APPDATA%`.
@@ -27,14 +28,16 @@ Hent siste versjon fra [Releases](https://github.com/stalegjelsten/print-fra-its
 1. Last ned besvarelsene fra itslearning som en zip-fil.
 2. Start `PrintFraItslearning.exe`.
 3. Klikk **Velg ZIP-fil fra itslearning** (eller **Velg mappe**).
-4. Velg printer fra dropdown-en hvis den ikke allerede er riktig satt.
-5. I neste vindu, huk av filene du vil skrive ut og velg innstillinger:
-   - Topptekst og bunntekst
-   - Word-kommentarer
-   - Excel formelvisning
-   - Kombiner til én PDF / tosidig utskrift / lagre som fil
-   - Sorter etter fornavn
-6. Klikk **Start →**.
+4. I utvalgsvinduet:
+   - Velg **printer** fra dropdown-en øverst (huskes til neste gang).
+   - Marker en fil i lista for å se **forhåndsvisning** til høyre. Dobbeltklikk åpner fila i ekstern app (f.eks. Word/Excel).
+   - Huk av filene du vil skrive ut og velg innstillinger:
+     - Topptekst og bunntekst
+     - Word-kommentarer
+     - Excel formelvisning
+     - Kombiner til én PDF / tosidig utskrift / lagre som fil
+     - Sorter etter fornavn
+5. Klikk **Start →**.
 
 ## Krav på maskinen
 
@@ -53,7 +56,7 @@ margin_cm=2.0
 image_width_cm=17.0
 ```
 
-Verdier kan endres direkte i fila, eller via «Lagre»-knappen i UI-en.
+Verdier kan endres direkte i fila. `printer` settes automatisk når du velger en printer i UI-en.
 
 ## Bygge fra kilde
 
@@ -63,11 +66,12 @@ Krever .NET 8 SDK (eller nyere).
 # Restore + bygg
 dotnet build -c Release
 
-# Single-file self-contained Windows exe (~180 MB)
+# Single-file self-contained Windows exe (~80 MB komprimert)
 dotnet publish -c Release -r win-x64 \
   -p:PublishSingleFile=true \
   -p:SelfContained=true \
-  -p:IncludeNativeLibrariesForSelfExtract=true
+  -p:IncludeNativeLibrariesForSelfExtract=true \
+  -p:EnableCompressionInSingleFile=true
 ```
 
 Output: `bin/Release/net8.0-windows/win-x64/publish/PrintFraItslearning.exe`.
@@ -86,8 +90,9 @@ PrintFraItslearning/
 ├── ZipExtractor.cs               # ZIP → %TEMP% + auto-cleanup
 ├── Assets/app.ico                # multi-size programikon (16…256 px)
 ├── Forms/
-│   ├── SourceForm.cs             # ZIP/mappe + printer-dropdown
-│   ├── SelectionForm.cs          # fil-tre + innstillinger
+│   ├── SourceForm.cs             # ZIP/mappe-valg
+│   ├── SelectionForm.cs          # printer-dropdown + fil-tre + forhåndsvisning + innstillinger
+│   ├── PreviewControl.cs         # forhåndsvisning av PDF/bilder/HTML/tekst
 │   └── ProgressForm.cs           # framdrift + logg
 ├── Printing/
 │   ├── WordPrinter.cs            # COM late binding (print + ExportToPdf)

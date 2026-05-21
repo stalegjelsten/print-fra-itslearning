@@ -132,10 +132,11 @@ Logg inn på itslearning og gå til oppgaven du vil skrive ut besvarelser fra.
 == Steg 2: Kjør utskriftsprogrammet
 
 + Dobbeltklikk på `PrintFraItslearning.exe`.
-+ I det første vinduet velger du printer fra nedtrekkslisten (programmet henter automatisk alle installerte printere). Klikk *Lagre* hvis du vil at valget skal huskes til neste gang.
-+ Klikk på enten *Velg ZIP-fil fra itslearning* eller *Velg mappe*, og velg fila/mappa.
-+ Programmet skanner filene og åpner et nytt vindu hvor du ser alle filene gruppert etter type.
++ I det første vinduet klikker du på enten *Velg ZIP-fil fra itslearning* eller *Velg mappe*, og velger fila/mappa. (Du kan også klikke *Avslutt* for å lukke programmet.)
++ Programmet skanner filene og åpner et nytt vindu hvor du ser alle filene gruppert etter type, med en forhåndsvisning til høyre.
 + I dette vinduet kan du:
+  - Velge *printer* fra nedtrekkslisten øverst (programmet henter automatisk alle installerte printere). Valget huskes til neste gang. Klikk på ↻-knappen for å oppdatere listen.
+  - *Markere en fil* i lista for å se forhåndsvisning til høyre. PDF, bilder, HTML og tekstfiler vises automatisk. Word- og Excel-filer kan ikke forhåndsvises i programmet -- *dobbeltklikk* for å åpne dem i Word/Excel i stedet.
   - *Avhuke* enkeltfiler du *ikke* vil skrive ut.
   - Slå av/på *topptekst og bunntekst* (mappenavn + sidenummer).
   - Slå av/på utskrift av *kommentarer* i Word-dokumenter.
@@ -206,7 +207,11 @@ PDF-motoren krever Visual C++ 2015-2022 Redistributable. Last ned og installer #
 
 == Hvis printer-listen er tom
 
-Klikk på den runde pilen (↻) ved siden av printer-dropdown-en for å hente listen på nytt.
+Klikk på den runde pilen (↻) ved siden av printer-dropdown-en (øverst i utvalg-vinduet) for å hente listen på nytt.
+
+== Hvis forhåndsvisningen ikke vises
+
+PDF-er, bilder, HTML og tekstfiler får forhåndsvisning automatisk. Word- og Excel-filer er ikke støttet i forhåndsvisningen -- dobbeltklikk på fila i lista for å åpne den i Word eller Excel i stedet.
 
 = Kontakt og lisens
 

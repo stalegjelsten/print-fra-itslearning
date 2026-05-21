@@ -54,7 +54,7 @@ internal static class PdfiumLoader
     {
         var nativeDir = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "PrintFraItslearning", "native", "2.0.0");
+            "PrintFraItslearning", "native", "2.1.0");
         Directory.CreateDirectory(nativeDir);
 
         var target = Path.Combine(nativeDir, "pdfium.dll");
