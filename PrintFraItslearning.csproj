@@ -1,0 +1,46 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <UseWPF>true</UseWPF>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <RootNamespace>PrintFraItslearning</RootNamespace>
+    <AssemblyName>PrintFraItslearning</AssemblyName>
+    <AssemblyVersion>2.0.0.0</AssemblyVersion>
+    <FileVersion>2.0.0.0</FileVersion>
+    <Version>2.0.0</Version>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <LangVersion>latest</LangVersion>
+    <ApplicationIcon>Assets\app.ico</ApplicationIcon>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
+    <ApplicationDefaultFont>Segoe UI, 9pt</ApplicationDefaultFont>
+    <ApplicationVisualStyles>true</ApplicationVisualStyles>
+    <ApplicationUseCompatibleTextRendering>false</ApplicationUseCompatibleTextRendering>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="PDFsharp" Version="6.1.1" />
+    <PackageReference Include="PdfiumViewer" Version="2.13.0.0" />
+    <PackageReference Include="PdfiumViewer.Native.x86_64.v8-xfa" Version="2018.4.8.256" GeneratePathProperty="true" />
+    <PackageReference Include="System.Management" Version="8.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="$(PkgPdfiumViewer_Native_x86_64_v8-xfa)\Build\x64\pdfium.dll">
+      <LogicalName>PrintFraItslearning.Native.pdfium.dll</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Assets\app.ico">
+      <LogicalName>PrintFraItslearning.app.ico</LogicalName>
+    </EmbeddedResource>
+  </ItemGroup>
+
+  <!-- Ikke kopier x64-undermappa til output siden vi embedder pdfium.dll -->
+  <ItemGroup>
+    <Content Remove="$(PkgPdfiumViewer_Native_x86_64_v8-xfa)\Build\x64\pdfium.dll" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1E88E5"/>
+      <stop offset="1" stop-color="#1565C0"/>
+    </linearGradient>
+  </defs>
+  <rect x="0" y="0" width="256" height="256" rx="40" fill="url(#bg)"/>
+
+  <!-- Papir som kommer ut bak printeren -->
+  <rect x="76" y="48" width="104" height="68" fill="#FFFFFF" stroke="#0D47A1" stroke-width="2" rx="2"/>
+  <line x1="92" y1="68" x2="164" y2="68" stroke="#1976D2" stroke-width="3"/>
+  <line x1="92" y1="84" x2="164" y2="84" stroke="#1976D2" stroke-width="3"/>
+  <line x1="92" y1="100" x2="148" y2="100" stroke="#1976D2" stroke-width="3"/>
+
+  <!-- Printer-kropp -->
+  <rect x="44" y="116" width="168" height="80" fill="#ECEFF1" stroke="#0D47A1" stroke-width="3" rx="8"/>
+
+  <!-- LED -->
+  <circle cx="180" cy="138" r="7" fill="#76FF03"/>
+
+  <!-- Utskrevet papir foran -->
+  <rect x="76" y="180" width="104" height="52" fill="#FFFFFF" stroke="#0D47A1" stroke-width="3" rx="2"/>
+  <line x1="92" y1="198" x2="164" y2="198" stroke="#1976D2" stroke-width="3"/>
+  <line x1="92" y1="212" x2="164" y2="212" stroke="#1976D2" stroke-width="3"/>
+</svg>
