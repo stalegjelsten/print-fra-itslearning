@@ -111,6 +111,8 @@ Dette er andre generasjon av verktøyet. Første versjon var et PowerShell-skrip
 
 [MIT](LICENSE) — fri bruk, endring og videredistribusjon. Leveres «som det er», uten garantier.
 
+Den distribuerte `.exe` bundler komponenter under MIT-, Apache 2.0- og BSD-lisenser — se [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md).
+
 ## Forfatter
 
 Utviklet av [Ståle Gjelsten](https://github.com/stalegjelsten) i samarbeid med språkmodellen [Claude](https://www.anthropic.com/claude) fra Anthropic.
