@@ -84,7 +84,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 ---
 
-## .NET 8 Runtime og BCL
+## .NET 10 Runtime og BCL
 
 - Bruk: kjøretidsmiljø (bundlet via self-contained publish)
 - Lisens: MIT
@@ -93,7 +93,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 Inkluderer blant annet:
 
-- `System.Management` 8.0.0 (MIT)
+- `System.Management` 10.0.0 (MIT)
 - `System.Windows.Forms` (MIT)
 - `System.Drawing.Common` (MIT)
 - `System.Printing` (MIT)
