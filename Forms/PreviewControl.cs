@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Windows.Forms;
 using HtmlAgilityPack;
 using PdfiumViewer;
@@ -54,7 +55,7 @@ public sealed class PreviewControl : UserControl
             Dock = DockStyle.Top,
             Height = 22,
             Padding = new Padding(6, 2, 6, 2),
-            Text = "Åpne i ekstern app",
+            Text = "Åpne i tilhørende app",
             Visible = false
         };
         _openLink.LinkClicked += (_, _) => OpenCurrentExternally();
@@ -293,11 +294,11 @@ public sealed class PreviewControl : UserControl
     {
         FileKind.Word => "Åpne i Word",
         FileKind.Excel => "Åpne i Excel",
-        FileKind.Pdf => "Åpne PDF eksternt",
-        FileKind.Image => "Åpne bilde eksternt",
-        FileKind.Html => "Åpne HTML eksternt",
-        FileKind.Text => "Åpne tekstfil eksternt",
-        _ => "Åpne i ekstern app"
+        FileKind.Pdf => "Åpne i PDF-leser",
+        FileKind.Image => "Åpne i bildeviser",
+        FileKind.Html => "Åpne i nettleser",
+        FileKind.Text => "Åpne i teksteditor",
+        _ => "Åpne i tilhørende app"
     };
 
     private static PdfPreview RenderPdfFirstPage(string pdfPath)
@@ -343,6 +344,10 @@ public sealed class PreviewControl : UserControl
             "section", "table", "tbody", "td", "tfoot", "th", "thead", "tr", "ul"
         };
 
+        private static readonly Regex ResidualTagRegex =
+            new(@"</?\s*[a-z][a-z0-9:-]*(?:\s+[^<>]*)?/?>",
+                RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+
         public static string FromHtml(string html)
         {
             var doc = new HtmlAgilityPack.HtmlDocument();
@@ -355,7 +360,7 @@ public sealed class PreviewControl : UserControl
             var sb = new StringBuilder();
             AppendNode(root, sb);
 
-            var text = CleanWhitespace(sb.ToString());
+            var text = CleanWhitespace(StripResidualMarkup(sb.ToString()));
             if (text.Length == 0)
                 return "HTML-filen har ikke lesbart tekstinnhold.";
 
@@ -437,6 +442,9 @@ public sealed class PreviewControl : UserControl
 
             return string.Join(Environment.NewLine, lines);
         }
+
+        private static string StripResidualMarkup(string text) =>
+            ResidualTagRegex.Replace(HtmlEntity.DeEntitize(text), Environment.NewLine);
 
         private static string CollapseSpaces(string text)
         {
