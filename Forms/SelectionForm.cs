@@ -8,6 +8,8 @@ namespace PrintFraItslearning.Forms;
 
 public sealed class SelectionForm : Form
 {
+    private sealed record FileGroup(string Title);
+
     private readonly Config _config;
     private readonly string _rootPath;
     private readonly ZipExtractor? _zip;
@@ -27,6 +29,7 @@ public sealed class SelectionForm : Form
     private readonly CheckBox _sortFirstNameCheck;
     private readonly Label _statusLabel;
     private readonly Button _printButton;
+    private readonly Button _cancelButton;
     private readonly ToolTip _toolTip = new();
 
     private ScanResult? _scan;
@@ -47,8 +50,8 @@ public sealed class SelectionForm : Form
 
         Text = "Velg hva som skal skrives ut";
         StartPosition = FormStartPosition.CenterScreen;
-        ClientSize = new Size(900, 728);
-        MinimumSize = new Size(780, 620);
+        ClientSize = new Size(1000, 640);
+        MinimumSize = new Size(860, 580);
 
         var printerLabel = new Label
         {
@@ -62,7 +65,7 @@ public sealed class SelectionForm : Form
         _printerCombo = new ComboBox
         {
             Location = new Point(72, 12),
-            Size = new Size(640, 24),
+            Size = new Size(804, 24),
             Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
             DropDownStyle = ComboBoxStyle.DropDownList,
             DropDownHeight = 240
@@ -73,7 +76,7 @@ public sealed class SelectionForm : Form
         var refreshBtn = new Button
         {
             Text = "↻",
-            Location = new Point(718, 10),
+            Location = new Point(884, 10),
             Size = new Size(32, 28),
             Anchor = AnchorStyles.Top | AnchorStyles.Right
         };
@@ -84,7 +87,7 @@ public sealed class SelectionForm : Form
         _printerCountLabel = new Label
         {
             Location = new Point(72, 40),
-            Size = new Size(678, 18),
+            Size = new Size(844, 18),
             Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
             ForeColor = Color.Gray,
             Text = ""
@@ -97,7 +100,7 @@ public sealed class SelectionForm : Form
         {
             Text = "Skanner…",
             Location = new Point(16, 66),
-            Size = new Size(868, 22),
+            Size = new Size(968, 22),
             Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
         };
         Controls.Add(_statusLabel);
@@ -114,23 +117,33 @@ public sealed class SelectionForm : Form
 
         _preview = new PreviewControl();
 
+        var fileListHeader = new Label
+        {
+            Text = "Filer",
+            Dock = DockStyle.Top,
+            Height = 24,
+            Padding = new Padding(4, 5, 0, 0),
+            Font = new Font(Font, FontStyle.Bold)
+        };
+
         _split = new SplitContainer
         {
             Location = new Point(16, 94),
-            Size = new Size(868, 286),
+            Size = new Size(968, 260),
             Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Bottom,
             Orientation = Orientation.Vertical,
-            SplitterDistance = 540,
+            SplitterDistance = 590,
             FixedPanel = FixedPanel.None
         };
         _split.Panel1.Controls.Add(_tree);
+        _split.Panel1.Controls.Add(fileListHeader);
         _split.Panel2.Controls.Add(_preview);
         Controls.Add(_split);
 
         var selectAll = new Button
         {
             Text = "Velg alle",
-            Location = new Point(16, 392),
+            Location = new Point(16, 366),
             Size = new Size(100, 30),
             Anchor = AnchorStyles.Left | AnchorStyles.Bottom
         };
@@ -140,132 +153,134 @@ public sealed class SelectionForm : Form
         var selectNone = new Button
         {
             Text = "Velg ingen",
-            Location = new Point(124, 392),
+            Location = new Point(124, 366),
             Size = new Size(100, 30),
             Anchor = AnchorStyles.Left | AnchorStyles.Bottom
         };
         selectNone.Click += (_, _) => SetAllChecks(false);
         Controls.Add(selectNone);
 
-        var settingsLabel = new Label
+        var settingsGroup = new GroupBox
         {
-            Text = "Innstillinger:",
-            Location = new Point(16, 436),
-            AutoSize = true,
-            Anchor = AnchorStyles.Left | AnchorStyles.Bottom,
-            Font = new Font(Font, FontStyle.Bold)
+            Text = "Utskriftsvalg",
+            Location = new Point(16, 404),
+            Size = new Size(968, 170),
+            Anchor = AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Bottom
         };
-        Controls.Add(settingsLabel);
+        Controls.Add(settingsGroup);
 
         _headerFooterCheck = new CheckBox
         {
             Text = "Legg til topptekst (mappenavn) og bunntekst (sidenummer)",
-            Location = new Point(16, 462),
-            Size = new Size(580, 24),
-            Anchor = AnchorStyles.Left | AnchorStyles.Bottom,
+            Location = new Point(14, 26),
+            Size = new Size(444, 24),
+            Anchor = AnchorStyles.Top | AnchorStyles.Left,
             Checked = true
         };
-        Controls.Add(_headerFooterCheck);
+        settingsGroup.Controls.Add(_headerFooterCheck);
 
         _commentsCheck = new CheckBox
         {
             Text = "Skriv ut kommentarer i Word-dokumenter",
-            Location = new Point(16, 488),
-            Size = new Size(580, 24),
-            Anchor = AnchorStyles.Left | AnchorStyles.Bottom,
+            Location = new Point(14, 52),
+            Size = new Size(444, 24),
+            Anchor = AnchorStyles.Top | AnchorStyles.Left,
             Checked = false
         };
-        Controls.Add(_commentsCheck);
+        settingsGroup.Controls.Add(_commentsCheck);
 
         _excelFormulasCheck = new CheckBox
         {
             Text = "Skriv også ut formelvisning av Excel-filer (dobler antall sider)",
-            Location = new Point(16, 514),
-            Size = new Size(580, 24),
-            Anchor = AnchorStyles.Left | AnchorStyles.Bottom,
+            Location = new Point(14, 78),
+            Size = new Size(444, 24),
+            Anchor = AnchorStyles.Top | AnchorStyles.Left,
             Checked = true,
             Visible = false
         };
-        Controls.Add(_excelFormulasCheck);
+        settingsGroup.Controls.Add(_excelFormulasCheck);
 
         _combineCheck = new CheckBox
         {
             Text = "Kombiner alle filer til én PDF og skriv ut som én jobb",
-            Location = new Point(16, 540),
-            Size = new Size(580, 24),
-            Anchor = AnchorStyles.Left | AnchorStyles.Bottom,
+            Location = new Point(490, 26),
+            Size = new Size(444, 24),
+            Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
             Checked = false
         };
-        Controls.Add(_combineCheck);
+        settingsGroup.Controls.Add(_combineCheck);
 
         _duplexCheck = new CheckBox
         {
             Text = "Tosidig utskrift: legg inn tomme sider mellom elever",
-            Location = new Point(40, 564),
-            Size = new Size(556, 24),
-            Anchor = AnchorStyles.Left | AnchorStyles.Bottom,
+            Location = new Point(514, 52),
+            Size = new Size(420, 24),
+            Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
             Checked = true,
             Visible = false
         };
-        Controls.Add(_duplexCheck);
+        settingsGroup.Controls.Add(_duplexCheck);
 
         _combinePrintCheck = new CheckBox
         {
             Text = "Send kombinert PDF til skriveren",
-            Location = new Point(40, 588),
-            Size = new Size(556, 24),
-            Anchor = AnchorStyles.Left | AnchorStyles.Bottom,
+            Location = new Point(514, 78),
+            Size = new Size(420, 24),
+            Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
             Checked = true,
             Visible = false
         };
-        Controls.Add(_combinePrintCheck);
+        settingsGroup.Controls.Add(_combinePrintCheck);
 
         _combineSaveCheck = new CheckBox
         {
             Text = "Lagre kombinert PDF som fil",
-            Location = new Point(40, 612),
-            Size = new Size(556, 24),
-            Anchor = AnchorStyles.Left | AnchorStyles.Bottom,
+            Location = new Point(514, 104),
+            Size = new Size(420, 24),
+            Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
             Checked = false,
             Visible = false
         };
-        Controls.Add(_combineSaveCheck);
+        settingsGroup.Controls.Add(_combineSaveCheck);
 
         _combineCheck.CheckedChanged += (_, _) =>
         {
             _duplexCheck.Visible = _combineCheck.Checked;
             _combinePrintCheck.Visible = _combineCheck.Checked;
             _combineSaveCheck.Visible = _combineCheck.Checked;
+            UpdateSelectionUi();
         };
+        _combinePrintCheck.CheckedChanged += (_, _) => UpdateSelectionUi();
+        _combineSaveCheck.CheckedChanged += (_, _) => UpdateSelectionUi();
 
         _sortFirstNameCheck = new CheckBox
         {
             Text = "Sorter etter fornavn",
-            Location = new Point(16, 640),
-            Size = new Size(580, 24),
-            Anchor = AnchorStyles.Left | AnchorStyles.Bottom,
+            Location = new Point(14, 104),
+            Size = new Size(444, 24),
+            Anchor = AnchorStyles.Top | AnchorStyles.Left,
             Checked = false,
             Visible = false
         };
-        Controls.Add(_sortFirstNameCheck);
+        settingsGroup.Controls.Add(_sortFirstNameCheck);
 
-        var cancelBtn = new Button
+        _cancelButton = new Button
         {
-            Text = "Avbryt",
-            Location = new Point(468, 682),
-            Size = new Size(94, 34),
+            Text = "Tilbake",
+            Location = new Point(666, 590),
+            Size = new Size(104, 34),
             Anchor = AnchorStyles.Right | AnchorStyles.Bottom,
             DialogResult = DialogResult.Cancel
         };
-        cancelBtn.Click += (_, _) => Close();
-        Controls.Add(cancelBtn);
-        CancelButton = cancelBtn;
+        _cancelButton.Click += (_, _) => Close();
+        Controls.Add(_cancelButton);
+        CancelButton = _cancelButton;
 
         _printButton = new Button
         {
-            Text = "Start →",
-            Location = new Point(570, 682),
-            Size = new Size(94, 34),
+            Text = "Start",
+            Location = new Point(778, 590),
+            Size = new Size(210, 34),
             Anchor = AnchorStyles.Right | AnchorStyles.Bottom,
             Enabled = false
         };
@@ -371,21 +386,17 @@ public sealed class SelectionForm : Form
 
         _tree.EndUpdate();
 
-        _statusLabel.Text = $"Filer ({_printableFiles.Count} funnet):";
         _sortFirstNameCheck.Visible = _hasSortableNames;
         _commentsCheck.Visible = wordFiles.Count > 0;
         _excelFormulasCheck.Visible = excelFiles.Count > 0;
         _headerFooterCheck.Visible = _printableFiles.Count > 0;
-        _printButton.Enabled = _printableFiles.Count > 0;
-
-        if (_printableFiles.Count == 0)
-            _statusLabel.Text = "Ingen utskrivbare filer funnet i valgt kilde.";
+        UpdateSelectionUi();
     }
 
     private void AddGroup(string title, List<ScannedFile> files)
     {
         if (files.Count == 0) return;
-        var groupNode = new TreeNode(title) { Checked = true, Tag = "group" };
+        var groupNode = new TreeNode(title) { Checked = true, Tag = new FileGroup(title) };
         foreach (var f in files)
         {
             var label = $"{f.Name}   [{f.FolderName}]";
@@ -423,8 +434,7 @@ public sealed class SelectionForm : Form
         _suppressCheckEvent = true;
         try
         {
-            // Hvis gruppenoden ble huket av/på — propager til barna
-            if (e.Node.Tag is string s && s == "group")
+            if (e.Node.Tag is FileGroup)
             {
                 foreach (TreeNode child in e.Node.Nodes)
                     child.Checked = e.Node.Checked;
@@ -441,6 +451,8 @@ public sealed class SelectionForm : Form
         {
             _suppressCheckEvent = false;
         }
+        UpdateGroupLabels();
+        UpdateSelectionUi();
     }
 
     private void SetAllChecks(bool value)
@@ -459,7 +471,78 @@ public sealed class SelectionForm : Form
         {
             _suppressCheckEvent = false;
         }
+        UpdateGroupLabels();
+        UpdateSelectionUi();
     }
+
+    private void UpdateSelectionUi()
+    {
+        var total = _printableFiles.Count;
+        var selected = CountSelectedFiles();
+
+        if (total == 0)
+        {
+            _statusLabel.Text = "Ingen utskrivbare filer funnet i valgt kilde.";
+            _printButton.Text = "Start";
+            _printButton.Enabled = false;
+            return;
+        }
+
+        _statusLabel.Text = $"{selected} av {total} filer valgt";
+        var hasPdfAction = !_combineCheck.Checked || _combinePrintCheck.Checked || _combineSaveCheck.Checked;
+        _printButton.Enabled = selected > 0 && hasPdfAction;
+
+        if (_combineCheck.Checked && !hasPdfAction)
+            _statusLabel.Text += " - velg om PDF-en skal skrives ut eller lagres";
+
+        _printButton.Text = PrintButtonText(selected);
+    }
+
+    private string PrintButtonText(int selected)
+    {
+        if (!_combineCheck.Checked)
+            return $"Skriv ut {selected} {FileText(selected)}";
+
+        if (_combinePrintCheck.Checked && _combineSaveCheck.Checked)
+            return $"Lag og skriv ut PDF ({selected})";
+        if (_combinePrintCheck.Checked)
+            return $"Skriv ut samlet PDF ({selected})";
+        if (_combineSaveCheck.Checked)
+            return $"Lagre samlet PDF ({selected})";
+
+        return "Velg PDF-handling";
+    }
+
+    private void UpdateGroupLabels()
+    {
+        foreach (TreeNode group in _tree.Nodes)
+        {
+            if (group.Tag is not FileGroup fileGroup) continue;
+
+            var total = group.Nodes.Count;
+            var selected = group.Nodes.Cast<TreeNode>().Count(n => n.Checked);
+            group.Text = selected == total
+                ? fileGroup.Title
+                : $"{fileGroup.Title} - {selected} av {total} valgt";
+        }
+    }
+
+    private int CountSelectedFiles()
+    {
+        var selected = 0;
+        foreach (TreeNode group in _tree.Nodes)
+        {
+            foreach (TreeNode child in group.Nodes)
+            {
+                if (child.Checked && child.Tag is ScannedFile)
+                    selected++;
+            }
+        }
+
+        return selected;
+    }
+
+    private static string FileText(int count) => count == 1 ? "fil" : "filer";
 
     private void StartPrinting()
     {

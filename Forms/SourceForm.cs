@@ -25,12 +25,20 @@ public sealed class SourceForm : Form
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = false;
         MinimizeBox = false;
-        ClientSize = new Size(520, 256);
+        ClientSize = new Size(520, 304);
+
+        var introLabel = new Label
+        {
+            Text = "Velg ZIP-filen du lastet ned fra itslearning, eller en allerede utpakket mappe.",
+            Location = new Point(24, 18),
+            Size = new Size(472, 36)
+        };
+        Controls.Add(introLabel);
 
         var zipBtn = new Button
         {
             Text = "Velg ZIP-fil fra itslearning",
-            Location = new Point(24, 24),
+            Location = new Point(24, 62),
             Size = new Size(472, 60)
         };
         zipBtn.Click += (_, _) => ChooseZip();
@@ -42,7 +50,7 @@ public sealed class SourceForm : Form
         var folderBtn = new Button
         {
             Text = "Velg mappe",
-            Location = new Point(24, 96),
+            Location = new Point(24, 134),
             Size = new Size(472, 60)
         };
         folderBtn.Click += (_, _) => ChooseFolder();
@@ -52,7 +60,7 @@ public sealed class SourceForm : Form
 
         _updateLabel = new Label
         {
-            Location = new Point(24, 172),
+            Location = new Point(24, 210),
             Size = new Size(472, 36),
             ForeColor = Color.DarkOrange,
             Cursor = Cursors.Hand,
@@ -67,7 +75,7 @@ public sealed class SourceForm : Form
         var cancelBtn = new Button
         {
             Text = "Avslutt",
-            Location = new Point(412, 210),
+            Location = new Point(412, 258),
             Size = new Size(84, 32),
             DialogResult = DialogResult.Cancel
         };

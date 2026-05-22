@@ -11,6 +11,8 @@ namespace PrintFraItslearning.Forms;
 
 public sealed class PreviewControl : UserControl
 {
+    private sealed record PdfPreview(Bitmap? Image, int PageCount);
+
     private readonly Label _header;
     private readonly LinkLabel _openLink;
     private readonly Label _message;
@@ -110,6 +112,7 @@ public sealed class PreviewControl : UserControl
         }
 
         _header.Text = $"{file.Name}   [{file.FolderName}]";
+        _openLink.Text = ExternalOpenText(file.Kind);
         _openLink.Visible = true;
 
         switch (file.Kind)
@@ -183,16 +186,24 @@ public sealed class PreviewControl : UserControl
         SetBusy(true);
         try
         {
-            var bmp = await Task.Run(() => RenderPdfFirstPage(file.FullName), token);
-            if (token.IsCancellationRequested || _current != file) { bmp?.Dispose(); return; }
-            if (bmp == null)
+            var preview = await Task.Run(() => RenderPdfFirstPage(file.FullName), token);
+            if (token.IsCancellationRequested || _current != file)
+            {
+                preview.Image?.Dispose();
+                return;
+            }
+
+            if (preview.PageCount > 0)
+                _header.Text = $"{file.Name}   [{file.FolderName}] - Side 1 av {preview.PageCount}";
+
+            if (preview.Image == null)
             {
                 _message.Text = "Kunne ikke vise PDF.";
                 _message.Visible = true;
             }
             else
             {
-                _picture.Image = bmp;
+                _picture.Image = preview.Image;
                 _picture.Visible = true;
             }
         }
@@ -282,14 +293,25 @@ public sealed class PreviewControl : UserControl
         }
     }
 
-    private static Bitmap? RenderPdfFirstPage(string pdfPath)
+    private static string ExternalOpenText(FileKind kind) => kind switch
+    {
+        FileKind.Word => "Åpne i Word",
+        FileKind.Excel => "Åpne i Excel",
+        FileKind.Pdf => "Åpne PDF eksternt",
+        FileKind.Image => "Åpne bilde eksternt",
+        FileKind.Html => "Åpne HTML eksternt",
+        FileKind.Text => "Åpne tekstfil eksternt",
+        _ => "Åpne i ekstern app"
+    };
+
+    private static PdfPreview RenderPdfFirstPage(string pdfPath)
     {
         PdfiumLoader.EnsureLoaded();
         using var doc = PdfDocument.Load(pdfPath);
-        if (doc.PageCount == 0) return null;
+        if (doc.PageCount == 0) return new PdfPreview(null, 0);
         const float dpi = 110f;
-        var img = doc.Render(0, dpi, dpi, false);
-        return new Bitmap(img);
+        using var img = doc.Render(0, dpi, dpi, false);
+        return new PdfPreview(new Bitmap(img), doc.PageCount);
     }
 
     protected override void Dispose(bool disposing)

@@ -13,6 +13,7 @@ public sealed class ProgressForm : Form
     private readonly ListBox _log;
     private readonly Button _actionButton;
     private readonly Label _summaryLabel;
+    private readonly Label _resultSummaryLabel;
 
     private CancellationTokenSource? _cts;
     private bool _printingDone;
@@ -65,15 +66,26 @@ public sealed class ProgressForm : Form
         var logLabel = new Label
         {
             Text = "Logg:",
-            Location = new Point(16, 104),
+            Location = new Point(16, 132),
             AutoSize = true
         };
         Controls.Add(logLabel);
 
+        _resultSummaryLabel = new Label
+        {
+            Text = "",
+            Location = new Point(16, 104),
+            Size = new Size(648, 22),
+            Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
+            Font = new Font(Font, FontStyle.Bold),
+            ForeColor = SystemColors.GrayText
+        };
+        Controls.Add(_resultSummaryLabel);
+
         _log = new ListBox
         {
-            Location = new Point(16, 128),
-            Size = new Size(648, 374),
+            Location = new Point(16, 156),
+            Size = new Size(648, 346),
             Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Bottom,
             IntegralHeight = false,
             HorizontalScrollbar = true,
@@ -427,15 +439,20 @@ public sealed class ProgressForm : Form
     private void ShowFinalSummary()
     {
         var ok = _results.Count(r => r.Success);
-        var failed = _results.Count - ok;
-        var msg = failed == 0
+        var skipped = _results.Count(r => !r.Success && IsSkipped(r));
+        var failed = _results.Count - ok - skipped;
+        var msg = failed == 0 && skipped == 0
             ? $"Ferdig: {ok} av {_job.Files.Count} skrevet ut."
+            : failed == 0
+                ? $"Ferdig: {ok} av {_job.Files.Count} skrevet ut, {skipped} hoppet over."
             : $"Ferdig med feil: {ok} av {_job.Files.Count} skrevet ut, {failed} feilet.";
         _summaryLabel.Text = msg;
         _summaryLabel.ForeColor = failed == 0 ? Color.DarkGreen : Color.DarkRed;
+        _resultSummaryLabel.Text = $"OK: {ok}    Hoppet over: {skipped}    Feilet: {failed}";
+        _resultSummaryLabel.ForeColor = failed == 0 ? Color.DarkGreen : Color.DarkRed;
         _currentLabel.Text = "";
 
-        if (failed > 0)
+        if (failed > 0 || skipped > 0)
         {
             AppendLog("");
             AppendLog("Filer som ikke ble skrevet ut:");
@@ -443,6 +460,9 @@ public sealed class ProgressForm : Form
                 AppendLog($"  - {r.Name} [{r.Folder}]: {r.Detail}");
         }
     }
+
+    private static bool IsSkipped(PrintResultRow row) =>
+        row.Detail.Contains("ikke tilgjengelig", StringComparison.OrdinalIgnoreCase);
 
     private void CleanupTempFiles()
     {
