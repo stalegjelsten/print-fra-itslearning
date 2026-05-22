@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net8.0-windows</TargetFramework>
+    <TargetFramework>net10.0-windows</TargetFramework>
     <UseWindowsForms>true</UseWindowsForms>
     <UseWPF>true</UseWPF>
     <Nullable>enable</Nullable>
@@ -27,7 +27,7 @@
     <PackageReference Include="PDFsharp" Version="6.1.1" />
     <PackageReference Include="PdfiumViewer" Version="2.13.0.0" />
     <PackageReference Include="PdfiumViewer.Native.x86_64.v8-xfa" Version="2018.4.8.256" GeneratePathProperty="true" />
-    <PackageReference Include="System.Management" Version="8.0.0" />
+    <PackageReference Include="System.Management" Version="10.0.0" />
   </ItemGroup>
 
   <ItemGroup>
