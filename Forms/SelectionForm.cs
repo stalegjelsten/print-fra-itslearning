@@ -26,7 +26,7 @@ public sealed class SelectionForm : Form
     private readonly CheckBox _duplexCheck;
     private readonly CheckBox _combinePrintCheck;
     private readonly CheckBox _combineSaveCheck;
-    private readonly CheckBox _sortFirstNameCheck;
+    private readonly ComboBox _sortCombo;
     private readonly Label _statusLabel;
     private readonly Button _printButton;
     private readonly Button _cancelButton;
@@ -35,7 +35,6 @@ public sealed class SelectionForm : Form
     private ScanResult? _scan;
     private CombinedHtmlResult? _combined;
     private List<ScannedFile> _printableFiles = new();
-    private bool _hasSortableNames;
 
     public SelectionForm(Config config, string rootPath, ZipExtractor? zip)
     {
@@ -253,16 +252,30 @@ public sealed class SelectionForm : Form
         _combinePrintCheck.CheckedChanged += (_, _) => UpdateSelectionUi();
         _combineSaveCheck.CheckedChanged += (_, _) => UpdateSelectionUi();
 
-        _sortFirstNameCheck = new CheckBox
+        var sortLabel = new Label
         {
-            Text = "Sorter etter fornavn",
+            Text = "Sortering:",
             Location = new Point(14, 104),
-            Size = new Size(444, 24),
-            Anchor = AnchorStyles.Top | AnchorStyles.Left,
-            Checked = false,
-            Visible = false
+            AutoSize = true,
+            Anchor = AnchorStyles.Top | AnchorStyles.Left
         };
-        settingsGroup.Controls.Add(_sortFirstNameCheck);
+        settingsGroup.Controls.Add(sortLabel);
+
+        _sortCombo = new ComboBox
+        {
+            Location = new Point(86, 100),
+            Size = new Size(372, 24),
+            Anchor = AnchorStyles.Top | AnchorStyles.Left,
+            DropDownStyle = ComboBoxStyle.DropDownList
+        };
+        _sortCombo.Items.AddRange(new object[]
+        {
+            "Etternavn (fra mappenavn)",
+            "Fornavn (fra mappenavn)",
+            "Filnavn på utskrevet fil"
+        });
+        _sortCombo.SelectedIndex = 0;
+        settingsGroup.Controls.Add(_sortCombo);
 
         _cancelButton = new Button
         {
@@ -307,8 +320,8 @@ public sealed class SelectionForm : Form
             "Sender den kombinerte PDF-en til skriveren.");
         _toolTip.SetToolTip(_combineSaveCheck,
             "Lagrer den kombinerte PDF-en til en fil du velger.");
-        _toolTip.SetToolTip(_sortFirstNameCheck,
-            "Sortér elevene etter fornavn i stedet for etternavn.");
+        _toolTip.SetToolTip(_sortCombo,
+            "Velg rekkefølgen filene sendes til utskrift i.");
 
         ResumeLayout(performLayout: true);
 
@@ -360,8 +373,6 @@ public sealed class SelectionForm : Form
         _printableFiles.AddRange(_scan.Pdf);
         _printableFiles.AddRange(htmlToPrint);
 
-        _hasSortableNames = _printableFiles.Any(f =>
-            StudentName.TryParse(f.FolderName) != null);
     }
 
     private void PopulateTree()
@@ -386,7 +397,6 @@ public sealed class SelectionForm : Form
 
         _tree.EndUpdate();
 
-        _sortFirstNameCheck.Visible = _hasSortableNames;
         _commentsCheck.Visible = wordFiles.Count > 0;
         _excelFormulasCheck.Visible = excelFiles.Count > 0;
         _headerFooterCheck.Visible = _printableFiles.Count > 0;
@@ -563,8 +573,8 @@ public sealed class SelectionForm : Form
             return;
         }
 
-        bool sortByFirstName = _sortFirstNameCheck.Visible && _sortFirstNameCheck.Checked;
-        var sorted = SortFiles(selected, sortByFirstName);
+        var sortMode = SelectedSortMode();
+        var sorted = SortFiles(selected, sortMode);
 
         bool combine = _combineCheck.Checked;
         bool combinePrint = !combine || _combinePrintCheck.Checked;
@@ -622,7 +632,7 @@ public sealed class SelectionForm : Form
             DuplexPadBlankPages = combine && _duplexCheck.Checked,
             PrintCombinedPdf = combinePrint,
             SaveCombinedPdf = combineSave,
-            SortByFirstName = sortByFirstName,
+            SortMode = sortMode,
             GeneratedHtmlFiles = _combined?.GeneratedHtml ?? new List<FileInfo>(),
             TempExtraction = _zip,
             SaveCombinedPdfPath = savePath
@@ -640,12 +650,30 @@ public sealed class SelectionForm : Form
         }
     }
 
-    private static List<ScannedFile> SortFiles(List<ScannedFile> files, bool sortByFirstName)
+    private PrintSortMode SelectedSortMode() => _sortCombo.SelectedIndex switch
     {
+        1 => PrintSortMode.FirstNameFromFolder,
+        2 => PrintSortMode.PrintedFileName,
+        _ => PrintSortMode.LastNameFromFolder
+    };
+
+    private static List<ScannedFile> SortFiles(List<ScannedFile> files, PrintSortMode sortMode)
+    {
+        if (sortMode == PrintSortMode.PrintedFileName)
+        {
+            return files
+                .OrderBy(f => f.Name, StringComparer.OrdinalIgnoreCase)
+                .ThenBy(f => f.FolderName, StringComparer.OrdinalIgnoreCase)
+                .ThenBy(f => SortBucket(f.Kind))
+                .ToList();
+        }
+
         // Word/HTML først (raskt via COM), så Excel (via PDF-eksport), så PDF til slutt
         return files
             .OrderBy(f => SortBucket(f.Kind))
-            .ThenBy(f => NameKey(f, sortByFirstName), StringComparer.OrdinalIgnoreCase)
+            .ThenBy(f => SortKey(f, sortMode), StringComparer.OrdinalIgnoreCase)
+            .ThenBy(f => f.FolderName, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(f => f.Name, StringComparer.OrdinalIgnoreCase)
             .ToList();
     }
 
@@ -658,11 +686,18 @@ public sealed class SelectionForm : Form
         _ => 3
     };
 
-    private static string NameKey(ScannedFile f, bool byFirstName)
+    private static string SortKey(ScannedFile f, PrintSortMode sortMode)
     {
-        if (!byFirstName) return f.FolderName;
+        if (sortMode == PrintSortMode.PrintedFileName)
+            return f.Name;
+
         var student = StudentName.TryParse(f.FolderName);
-        return student != null ? $"{student.Fornavn} {student.Etternavn}" : f.FolderName;
+        if (student == null)
+            return f.FolderName;
+
+        return sortMode == PrintSortMode.FirstNameFromFolder
+            ? $"{student.Fornavn} {student.Etternavn}"
+            : $"{student.Etternavn} {student.Fornavn}";
     }
 
     private void PopulatePrinters()

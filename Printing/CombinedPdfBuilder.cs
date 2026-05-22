@@ -64,13 +64,14 @@ public sealed class CombinedPdfBuilder
                     excel = new ExcelPrinter(_job.Config.MarginCm);
             }
 
-            // Filer er allerede sortert (Word/HTML → Excel → PDF, innen elev etter navn).
-            // Vi grupperer per mappe (=elev) i den rekkefølgen elevene først dukker opp.
-            var groups = _job.Files
-                .Select((f, idx) => (f, idx))
-                .GroupBy(t => t.f.FolderName, StringComparer.OrdinalIgnoreCase)
-                .OrderBy(g => g.Min(x => x.idx))
-                .ToList();
+            var orderedFiles = _job.Files.Select((f, idx) => (f, idx));
+            var groups = _job.SortMode == PrintSortMode.PrintedFileName
+                ? orderedFiles.Select(t => new List<(ScannedFile f, int idx)> { t }).ToList()
+                : orderedFiles
+                    .GroupBy(t => t.f.FolderName, StringComparer.OrdinalIgnoreCase)
+                    .OrderBy(g => g.Min(x => x.idx))
+                    .Select(g => g.ToList())
+                    .ToList();
 
             int counter = 0;
             foreach (var group in groups)
@@ -186,7 +187,7 @@ public sealed class CombinedPdfBuilder
     private string FolderNameFor(ScannedFile file)
     {
         var folderName = file.FolderName;
-        if (_job.SortByFirstName)
+        if (_job.SortMode == PrintSortMode.FirstNameFromFolder)
         {
             var student = StudentName.TryParse(folderName);
             if (student != null)

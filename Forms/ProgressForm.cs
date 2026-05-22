@@ -398,7 +398,7 @@ public sealed class ProgressForm : Form
     private string FolderNameFor(ScannedFile file)
     {
         var folderName = file.FolderName;
-        if (_job.SortByFirstName)
+        if (_job.SortMode == PrintSortMode.FirstNameFromFolder)
         {
             var student = StudentName.TryParse(folderName);
             if (student != null)
