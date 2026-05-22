@@ -142,7 +142,7 @@ Logg inn på itslearning og gå til oppgaven du vil skrive ut besvarelser fra.
   - Slå av/på utskrift av *kommentarer* i Word-dokumenter.
   - Slå av/på *formelvisning* for Excel-filer.
   - Velge *Kombiner alle filer til én PDF og skriv ut som én jobb* (se under).
-  - Velge *Sorter etter fornavn* i stedet for etternavn (kun synlig hvis mappenavnene har formatet «Etternavn, Fornavn (epost)»).
+  - Velge *sortering* fra nedtrekkslista. Standard er *Etternavn (fra mappenavn)*. Du kan også velge *Fornavn (fra mappenavn)* eller *Filnavn på utskrevet fil* hvis du vil at filene skal komme i alfabetisk rekkefølge etter filnavn i stedet for elevnavn.
 + Klikk *Start →* for å begynne. Programmet viser fremgang i et eget vindu med en logg som viser hver fil etter hvert som den skrives ut.
 
 == Kombinert PDF-modus
@@ -151,7 +151,7 @@ Hvis du huker av *Kombiner alle filer til én PDF og skriv ut som én jobb* får
 
 - *Tosidig utskrift: legg inn tomme sider mellom elever* -- sikrer at hver elev alltid starter på forsiden av et nytt ark når printeren skriver ut tosidig. Anbefales hvis du printer duplex.
 - *Send kombinert PDF til skriveren* -- standard. Skriver ut alt som én jobb.
-- *Lagre kombinert PDF som fil* -- åpner en lagre-dialog hvor du velger hvor PDF-en skal lagres. Du kan både skrive ut og lagre, eller bare gjøre én av delene.
+- *Lagre kombinert PDF som fil* -- åpner en lagre-dialog hvor du velger hvor PDF-en skal lagres. Du kan både skrive ut og lagre, eller bare gjøre én av delene. Når jobben er ferdig dukker det opp en klikkbar lenke i fremgangsvinduet som åpner den lagrede PDF-en i din standard PDF-leser.
 
 Denne modusen er nyttig når du vil:
 
