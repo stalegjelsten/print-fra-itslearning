@@ -15,6 +15,9 @@ permissions:
   id-token: write
   attestations: write
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -35,8 +38,17 @@ jobs:
         with:
           typst-version: latest
 
-      - name: Install Libertinus fonts
-        run: sudo apt-get update && sudo apt-get install -y fonts-libertinus
+      - name: Download Libertinus fonts
+        run: |
+          mkdir -p typst-fonts
+          URL=$(curl -sL https://api.github.com/repos/alerque/libertinus/releases/latest \
+            | grep -Eo '"browser_download_url": "[^"]+\.zip"' \
+            | head -1 | cut -d'"' -f4)
+          echo "Henter Libertinus fra $URL"
+          curl -sL -o /tmp/libertinus.zip "$URL"
+          unzip -q /tmp/libertinus.zip -d /tmp/libertinus
+          find /tmp/libertinus -name "*.otf" -exec cp {} typst-fonts/ \;
+          ls typst-fonts/
 
       - name: Restore
         run: dotnet restore PrintFraItslearning.csproj
@@ -55,7 +67,7 @@ jobs:
 
       - name: Compile documentation PDF
         run: |
-          typst compile docs/dokumentasjon.typ publish/dokumentasjon.pdf
+          typst compile --font-path typst-fonts docs/dokumentasjon.typ publish/dokumentasjon.pdf
 
       - name: Generate SHA256 checksums
         run: |
