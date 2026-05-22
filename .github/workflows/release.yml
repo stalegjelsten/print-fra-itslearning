@@ -78,6 +78,14 @@ jobs:
             publish/PrintFraItslearning.exe
             publish/dokumentasjon.pdf
 
+      - name: Ensure release exists
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.inputs.tag || github.ref_name }}
+        run: |
+          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 \
+            || gh release create "$TAG" --title "$TAG" --notes-from-tag --repo "$GITHUB_REPOSITORY"
+
       - name: Upload assets to release
         env:
           GH_TOKEN: ${{ github.token }}
