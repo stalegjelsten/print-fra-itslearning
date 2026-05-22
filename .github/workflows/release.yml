@@ -50,15 +50,11 @@ jobs:
           find /tmp/libertinus -name "*.otf" -exec cp {} typst-fonts/ \;
           ls typst-fonts/
 
-      - name: Restore
-        run: dotnet restore PrintFraItslearning.csproj
-
       - name: Publish (single-file self-contained win-x64)
         run: |
           dotnet publish PrintFraItslearning.csproj \
             -c Release \
             -r win-x64 \
-            --no-restore \
             -p:PublishSingleFile=true \
             -p:SelfContained=true \
             -p:IncludeNativeLibrariesForSelfExtract=true \
