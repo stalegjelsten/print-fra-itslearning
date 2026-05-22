@@ -14,6 +14,16 @@ Den distribuerte `PrintFraItslearning.exe` bundler følgende åpen kildekode-kom
 
 ---
 
+## Html Agility Pack
+
+- Versjon: 1.12.4
+- Bruk: parsing av HTML til trygg, lesbar forhåndsvisning
+- Lisens: MIT
+- Copyright © ZZZ Projects Inc.
+- Prosjektside: <https://github.com/zzzprojects/html-agility-pack>
+
+---
+
 ## PdfiumViewer
 
 - Versjon: 2.13.0

@@ -3,6 +3,7 @@ using System.Drawing;
 using System.IO;
 using System.Text;
 using System.Windows.Forms;
+using HtmlAgilityPack;
 using PdfiumViewer;
 using PrintFraItslearning.Printing;
 using PrintFraItslearning.Scanning;
@@ -260,6 +261,7 @@ public sealed class PreviewControl : UserControl
             }
             if (!reader.EndOfStream)
                 sb.AppendLine("…  (mer innhold ikke vist)");
+            _text.WordWrap = false;
             _text.Text = sb.ToString();
             _text.Visible = true;
         }
@@ -276,14 +278,8 @@ public sealed class PreviewControl : UserControl
         {
             using var fs = File.Open(file.FullName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
             using var reader = new StreamReader(fs, Encoding.UTF8, detectEncodingFromByteOrderMarks: true);
-            var sb = new StringBuilder();
-            for (int i = 0; i < 500 && !reader.EndOfStream; i++)
-            {
-                sb.AppendLine(reader.ReadLine());
-            }
-            if (!reader.EndOfStream)
-                sb.AppendLine("...  (mer innhold ikke vist)");
-            _text.Text = sb.ToString();
+            _text.WordWrap = true;
+            _text.Text = HtmlPreviewText.FromHtml(reader.ReadToEnd());
             _text.Visible = true;
         }
         catch (Exception ex)
@@ -327,5 +323,135 @@ public sealed class PreviewControl : UserControl
             }
         }
         base.Dispose(disposing);
+    }
+
+    private static class HtmlPreviewText
+    {
+        private const int MaxChars = 20000;
+
+        private static readonly HashSet<string> RemovedTags = new(StringComparer.OrdinalIgnoreCase)
+        {
+            "script", "style", "noscript", "iframe", "object", "embed", "link", "meta",
+            "base", "form", "input", "button", "textarea", "select", "svg", "canvas"
+        };
+
+        private static readonly HashSet<string> BlockTags = new(StringComparer.OrdinalIgnoreCase)
+        {
+            "address", "article", "aside", "blockquote", "dd", "div", "dl", "dt",
+            "fieldset", "figcaption", "figure", "footer", "h1", "h2", "h3", "h4",
+            "h5", "h6", "header", "hr", "li", "main", "nav", "ol", "p", "pre",
+            "section", "table", "tbody", "td", "tfoot", "th", "thead", "tr", "ul"
+        };
+
+        public static string FromHtml(string html)
+        {
+            var doc = new HtmlAgilityPack.HtmlDocument();
+            doc.OptionFixNestedTags = true;
+            doc.LoadHtml(html);
+
+            RemoveUnsafeNodes(doc.DocumentNode);
+
+            var root = doc.DocumentNode.SelectSingleNode("//body") ?? doc.DocumentNode;
+            var sb = new StringBuilder();
+            AppendNode(root, sb);
+
+            var text = CleanWhitespace(sb.ToString());
+            if (text.Length == 0)
+                return "HTML-filen har ikke lesbart tekstinnhold.";
+
+            if (text.Length > MaxChars)
+                text = text[..MaxChars].TrimEnd() + Environment.NewLine + Environment.NewLine + "... (mer innhold ikke vist)";
+
+            return text;
+        }
+
+        private static void RemoveUnsafeNodes(HtmlNode root)
+        {
+            foreach (var node in root.Descendants().Where(n => RemovedTags.Contains(n.Name)).ToList())
+                node.Remove();
+        }
+
+        private static void AppendNode(HtmlNode node, StringBuilder sb)
+        {
+            if (sb.Length >= MaxChars) return;
+
+            switch (node.NodeType)
+            {
+                case HtmlNodeType.Text:
+                    AppendText(sb, HtmlEntity.DeEntitize(node.InnerText));
+                    return;
+
+                case HtmlNodeType.Element when node.Name.Equals("br", StringComparison.OrdinalIgnoreCase):
+                    AppendLineBreak(sb);
+                    return;
+
+                case HtmlNodeType.Element when node.Name.Equals("img", StringComparison.OrdinalIgnoreCase):
+                    AppendImagePlaceholder(node, sb);
+                    return;
+            }
+
+            var isBlock = node.NodeType == HtmlNodeType.Element && BlockTags.Contains(node.Name);
+            if (isBlock) AppendLineBreak(sb);
+
+            foreach (var child in node.ChildNodes)
+                AppendNode(child, sb);
+
+            if (isBlock) AppendLineBreak(sb);
+        }
+
+        private static void AppendImagePlaceholder(HtmlNode node, StringBuilder sb)
+        {
+            var alt = node.GetAttributeValue("alt", "");
+            var src = node.GetAttributeValue("src", "");
+            var label = !string.IsNullOrWhiteSpace(alt)
+                ? alt
+                : !string.IsNullOrWhiteSpace(src) ? Path.GetFileName(src) : "bilde";
+
+            AppendText(sb, $"[Bilde: {label}]");
+            AppendLineBreak(sb);
+        }
+
+        private static void AppendText(StringBuilder sb, string text)
+        {
+            if (string.IsNullOrWhiteSpace(text)) return;
+            if (sb.Length > 0 && !char.IsWhiteSpace(sb[^1]))
+                sb.Append(' ');
+            sb.Append(text.Trim());
+        }
+
+        private static void AppendLineBreak(StringBuilder sb)
+        {
+            if (sb.Length == 0) return;
+            if (sb[^1] != '\n')
+                sb.AppendLine();
+        }
+
+        private static string CleanWhitespace(string text)
+        {
+            var lines = text
+                .Replace("\r\n", "\n")
+                .Replace('\r', '\n')
+                .Split('\n')
+                .Select(line => CollapseSpaces(line).Trim())
+                .Where(line => line.Length > 0);
+
+            return string.Join(Environment.NewLine, lines);
+        }
+
+        private static string CollapseSpaces(string text)
+        {
+            var sb = new StringBuilder(text.Length);
+            var lastWasSpace = false;
+
+            foreach (var c in text)
+            {
+                var isSpace = char.IsWhiteSpace(c);
+                if (isSpace && lastWasSpace) continue;
+                sb.Append(isSpace ? ' ' : c);
+                lastWasSpace = isSpace;
+            }
+
+            return sb.ToString();
+        }
     }
 }
