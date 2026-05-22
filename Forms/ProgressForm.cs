@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Drawing;
 using System.Windows.Forms;
 using PrintFraItslearning.Printing;
@@ -14,10 +15,12 @@ public sealed class ProgressForm : Form
     private readonly Button _actionButton;
     private readonly Label _summaryLabel;
     private readonly Label _resultSummaryLabel;
+    private readonly LinkLabel _savedPdfLink;
 
     private CancellationTokenSource? _cts;
     private bool _printingDone;
     private readonly List<PrintResultRow> _results = new();
+    private string? _savedCombinedPdfPath;
 
     public ProgressForm(PrintJob job)
     {
@@ -66,7 +69,7 @@ public sealed class ProgressForm : Form
         var logLabel = new Label
         {
             Text = "Logg:",
-            Location = new Point(16, 132),
+            Location = new Point(16, 154),
             AutoSize = true
         };
         Controls.Add(logLabel);
@@ -82,10 +85,21 @@ public sealed class ProgressForm : Form
         };
         Controls.Add(_resultSummaryLabel);
 
+        _savedPdfLink = new LinkLabel
+        {
+            Text = "",
+            Location = new Point(16, 128),
+            Size = new Size(648, 22),
+            Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
+            Visible = false
+        };
+        _savedPdfLink.LinkClicked += (_, _) => OpenSavedCombinedPdf();
+        Controls.Add(_savedPdfLink);
+
         _log = new ListBox
         {
-            Location = new Point(16, 156),
-            Size = new Size(648, 346),
+            Location = new Point(16, 178),
+            Size = new Size(648, 324),
             Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Bottom,
             IntegralHeight = false,
             HorizontalScrollbar = true,
@@ -200,6 +214,7 @@ public sealed class ProgressForm : Form
                 try
                 {
                     File.Copy(result.OutputPdfPath, _job.SaveCombinedPdfPath, overwrite: true);
+                    _savedCombinedPdfPath = _job.SaveCombinedPdfPath;
                     AppendLog($"OK: kombinert PDF lagret til {_job.SaveCombinedPdfPath}");
                 }
                 catch (Exception ex)
@@ -452,6 +467,12 @@ public sealed class ProgressForm : Form
         _resultSummaryLabel.ForeColor = failed == 0 ? Color.DarkGreen : Color.DarkRed;
         _currentLabel.Text = "";
 
+        if (!string.IsNullOrWhiteSpace(_savedCombinedPdfPath))
+        {
+            _savedPdfLink.Text = $"Åpne samlet PDF: {Path.GetFileName(_savedCombinedPdfPath)}";
+            _savedPdfLink.Visible = true;
+        }
+
         if (failed > 0 || skipped > 0)
         {
             AppendLog("");
@@ -463,6 +484,21 @@ public sealed class ProgressForm : Form
 
     private static bool IsSkipped(PrintResultRow row) =>
         row.Detail.Contains("ikke tilgjengelig", StringComparison.OrdinalIgnoreCase);
+
+    private void OpenSavedCombinedPdf()
+    {
+        if (string.IsNullOrWhiteSpace(_savedCombinedPdfPath)) return;
+
+        try
+        {
+            Process.Start(new ProcessStartInfo(_savedCombinedPdfPath) { UseShellExecute = true });
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, $"Kunne ikke åpne PDF-filen:\n{ex.Message}", "Feil",
+                MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+    }
 
     private void CleanupTempFiles()
     {
