@@ -1,0 +1,82 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag å bygge (f.eks. v2.1.1)'
+        required: true
+
+permissions:
+  contents: write
+  id-token: write
+  attestations: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Setup Typst
+        uses: typst-community/setup-typst@v4
+        with:
+          typst-version: latest
+
+      - name: Install Libertinus fonts
+        run: sudo apt-get update && sudo apt-get install -y fonts-libertinus
+
+      - name: Restore
+        run: dotnet restore PrintFraItslearning.csproj
+
+      - name: Publish (single-file self-contained win-x64)
+        run: |
+          dotnet publish PrintFraItslearning.csproj \
+            -c Release \
+            -r win-x64 \
+            --no-restore \
+            -p:PublishSingleFile=true \
+            -p:SelfContained=true \
+            -p:IncludeNativeLibrariesForSelfExtract=true \
+            -p:EnableCompressionInSingleFile=true \
+            -o publish
+
+      - name: Compile documentation PDF
+        run: |
+          typst compile docs/dokumentasjon.typ publish/dokumentasjon.pdf
+
+      - name: Generate SHA256 checksums
+        run: |
+          cd publish
+          sha256sum PrintFraItslearning.exe dokumentasjon.pdf > SHA256SUMS
+          cat SHA256SUMS
+
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: |
+            publish/PrintFraItslearning.exe
+            publish/dokumentasjon.pdf
+
+      - name: Upload assets to release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.inputs.tag || github.ref_name }}
+        run: |
+          gh release upload "$TAG" \
+            publish/PrintFraItslearning.exe \
+            publish/dokumentasjon.pdf \
+            publish/SHA256SUMS \
+            --clobber --repo "$GITHUB_REPOSITORY"
