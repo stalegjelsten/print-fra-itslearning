@@ -10,6 +10,8 @@ internal static class Program
     {
         ApplicationConfiguration.Initialize();
 
+        AppTemp.CleanupOldFiles();
+
         var config = Config.Load();
 
         try

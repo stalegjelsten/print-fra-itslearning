@@ -16,7 +16,6 @@ public sealed class PreviewControl : UserControl
     private readonly Label _message;
     private readonly PictureBox _picture;
     private readonly TextBox _text;
-    private readonly WebBrowser _web;
     private readonly ProgressBar _spinner;
     private readonly Panel _content;
 
@@ -86,17 +85,8 @@ public sealed class PreviewControl : UserControl
             Visible = false
         };
 
-        _web = new WebBrowser
-        {
-            Dock = DockStyle.Fill,
-            AllowNavigation = true,
-            ScriptErrorsSuppressed = true,
-            Visible = false
-        };
-
         _content.Controls.Add(_picture);
         _content.Controls.Add(_text);
-        _content.Controls.Add(_web);
         _content.Controls.Add(_message);
 
         Controls.Add(_content);
@@ -134,7 +124,7 @@ public sealed class PreviewControl : UserControl
                 LoadTextPreview(file);
                 break;
             case FileKind.Html:
-                LoadHtmlPreview(file);
+                LoadHtmlAsTextPreview(file);
                 break;
             case FileKind.Word:
                 _message.Text = "Forhåndsvisning av Word-filer er ikke tilgjengelig.\nDobbeltklikk for å åpne i Word.";
@@ -177,8 +167,6 @@ public sealed class PreviewControl : UserControl
         }
         _text.Visible = false;
         _text.Text = "";
-        _web.Visible = false;
-        try { _web.Navigate("about:blank"); } catch { }
         SetBusy(false);
     }
 
@@ -271,16 +259,25 @@ public sealed class PreviewControl : UserControl
         }
     }
 
-    private void LoadHtmlPreview(ScannedFile file)
+    private void LoadHtmlAsTextPreview(ScannedFile file)
     {
         try
         {
-            _web.Navigate(new Uri(file.FullName));
-            _web.Visible = true;
+            using var fs = File.Open(file.FullName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+            using var reader = new StreamReader(fs, Encoding.UTF8, detectEncodingFromByteOrderMarks: true);
+            var sb = new StringBuilder();
+            for (int i = 0; i < 500 && !reader.EndOfStream; i++)
+            {
+                sb.AppendLine(reader.ReadLine());
+            }
+            if (!reader.EndOfStream)
+                sb.AppendLine("...  (mer innhold ikke vist)");
+            _text.Text = sb.ToString();
+            _text.Visible = true;
         }
         catch (Exception ex)
         {
-            _message.Text = $"Feil ved forhåndsvisning: {ex.Message}";
+            _message.Text = $"Feil ved lesing: {ex.Message}";
             _message.Visible = true;
         }
     }

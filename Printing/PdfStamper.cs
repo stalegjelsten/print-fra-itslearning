@@ -8,8 +8,7 @@ public static class PdfStamper
 {
     public static string StampHeaderFooter(string srcPdfPath, string folderName)
     {
-        var tempPath = Path.Combine(Path.GetTempPath(),
-            $"pfi_{Guid.NewGuid():N}.pdf");
+        var tempPath = AppTemp.FilePath("stamped", ".pdf");
 
         using (var doc = PdfReader.Open(srcPdfPath, PdfDocumentOpenMode.Modify))
         {

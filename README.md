@@ -54,9 +54,20 @@ Programmet leser/skriver `%APPDATA%\PrintFraItslearning\config.ini`:
 printer=\\TDCSPRN30\Sikker_UtskriftCS
 margin_cm=2.0
 image_width_cm=17.0
+check_for_updates=false
 ```
 
 Verdier kan endres direkte i fila. `printer` settes automatisk når du velger en printer i UI-en.
+Oppdateringssjekk mot GitHub er av som standard; sett `check_for_updates=true` hvis appen skal sjekke etter nye versjoner ved oppstart.
+
+## Personvern og sikkerhet
+
+- Programmet laster ikke opp elevbesvarelser, men sender dokumentene til valgt skriverkø.
+- Midlertidige filer legges under `%TEMP%\PrintFraItslearning` og gamle rester ryddes ved oppstart.
+- HTML forhåndsvises som tekst, ikke som aktiv webside.
+- HTML som kombineres for utskrift renses for script, eksterne ressurser og hendelses-attributter.
+- Word og Excel åpnes skjult med makroer tvunget av og uten lenkeoppdatering der Office tillater det.
+- Ved lagring av samlet PDF varsler appen hvis valgt sti ser ut som nettverks- eller sky-synkronisert mappe.
 
 ## Bygge fra kilde
 

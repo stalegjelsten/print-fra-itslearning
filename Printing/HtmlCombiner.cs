@@ -17,7 +17,19 @@ public static class HtmlCombiner
     private static readonly Regex BodyRegex =
         new(@"<body[^>]*>(?<body>.*?)</body>", RegexOptions.Singleline | RegexOptions.IgnoreCase);
     private static readonly Regex SrcRegex =
-        new(@"src=""(?<src>[^""]+)""", RegexOptions.IgnoreCase);
+        new(@"\bsrc\s*=\s*[""'](?<src>[^""']+)[""']", RegexOptions.IgnoreCase);
+    private static readonly Regex DangerousElementRegex =
+        new(@"<\s*(script|iframe|object|embed|link|meta|base|form|input|button|textarea|select)\b[^>]*>.*?<\s*/\s*\1\s*>|<\s*(script|iframe|object|embed|link|meta|base|form|input|button|textarea|select)\b[^>]*?/?>",
+            RegexOptions.IgnoreCase | RegexOptions.Singleline);
+    private static readonly Regex EventAttributeRegex =
+        new(@"\s+on[a-z0-9_-]+\s*=\s*(""[^""]*""|'[^']*'|[^\s>]+)",
+            RegexOptions.IgnoreCase);
+    private static readonly Regex StyleAttributeRegex =
+        new(@"\s+style\s*=\s*(""[^""]*""|'[^']*'|[^\s>]+)",
+            RegexOptions.IgnoreCase);
+    private static readonly Regex DangerousUrlAttributeRegex =
+        new(@"\s+(href|src|xlink:href)\s*=\s*(""(?<dq>[^""]*)""|'(?<sq>[^']*)'|(?<bare>[^\s>]+))",
+            RegexOptions.IgnoreCase);
 
     public static CombinedHtmlResult CombineForFolders(ScanResult scan, double marginCm)
     {
@@ -98,7 +110,7 @@ public static class HtmlCombiner
                 if (m.Success)
                 {
                     sb.Append($"\n<!-- Innhold fra: {html.Name} -->\n");
-                    sb.Append(m.Groups["body"].Value);
+                    sb.Append(SanitizeHtmlFragment(m.Groups["body"].Value));
                     sb.Append('\n');
                 }
                 foreach (Match sm in SrcRegex.Matches(existingContent))
@@ -145,4 +157,41 @@ public static class HtmlCombiner
     private static string HtmlEncode(string s) =>
         s.Replace("&", "&amp;").Replace("<", "&lt;").Replace(">", "&gt;")
          .Replace("\"", "&quot;").Replace("'", "&#39;");
+
+    private static string SanitizeHtmlFragment(string html)
+    {
+        var sanitized = DangerousElementRegex.Replace(html, "");
+        sanitized = EventAttributeRegex.Replace(sanitized, "");
+        sanitized = StyleAttributeRegex.Replace(sanitized, "");
+        sanitized = DangerousUrlAttributeRegex.Replace(sanitized, m =>
+        {
+            var attr = m.Groups[1].Value.ToLowerInvariant();
+            var raw = m.Groups["dq"].Success ? m.Groups["dq"].Value :
+                m.Groups["sq"].Success ? m.Groups["sq"].Value :
+                m.Groups["bare"].Value;
+
+            if (IsAllowedLocalReference(raw))
+                return $" {attr}=\"{HtmlEncode(raw)}\"";
+
+            return attr == "src"
+                ? $" {attr}=\"\""
+                : $" {attr}=\"#\"";
+        });
+        return sanitized;
+    }
+
+    private static bool IsAllowedLocalReference(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return false;
+        var trimmed = value.Trim();
+        if (trimmed.StartsWith("#", StringComparison.Ordinal)) return true;
+        if (trimmed.StartsWith("http:", StringComparison.OrdinalIgnoreCase)) return false;
+        if (trimmed.StartsWith("https:", StringComparison.OrdinalIgnoreCase)) return false;
+        if (trimmed.StartsWith("file:", StringComparison.OrdinalIgnoreCase)) return false;
+        if (trimmed.StartsWith("data:", StringComparison.OrdinalIgnoreCase)) return false;
+        if (trimmed.StartsWith("javascript:", StringComparison.OrdinalIgnoreCase)) return false;
+        if (Path.IsPathRooted(trimmed)) return false;
+        if (trimmed.Contains("..", StringComparison.Ordinal)) return false;
+        return true;
+    }
 }

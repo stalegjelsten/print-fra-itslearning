@@ -10,8 +10,7 @@ public sealed class ZipExtractor : IDisposable
 
     public static ZipExtractor Extract(string zipPath)
     {
-        var stamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
-        var target = Path.Combine(Path.GetTempPath(), $"PrintFraItslearning_{stamp}");
+        var target = AppTemp.CreateDirectory("zip");
         ZipFile.ExtractToDirectory(zipPath, target);
         return new ZipExtractor(target);
     }

@@ -14,6 +14,7 @@ public sealed class ExcelPrinter : IDisposable
     private const int XlSheetVisible = -1;
     private const int XlTypePDF = 0;
     private const int XlQualityStandard = 0;
+    private const int MsoAutomationSecurityForceDisable = 3;
 
     private dynamic? _excelApp;
     private readonly double _marginCm;
@@ -38,6 +39,8 @@ public sealed class ExcelPrinter : IDisposable
         _excelApp!.Visible = false;
         _excelApp.DisplayAlerts = false;
         _excelApp.ScreenUpdating = false;
+        try { _excelApp.AskToUpdateLinks = false; } catch { }
+        try { _excelApp.AutomationSecurity = MsoAutomationSecurityForceDisable; } catch { }
         return _excelApp;
     }
 
@@ -50,7 +53,10 @@ public sealed class ExcelPrinter : IDisposable
         var tempFiles = new List<string>();
         try
         {
-            workbook = app.Workbooks.Open(filePath, /*UpdateLinks*/ 0, /*ReadOnly*/ true);
+            workbook = app.Workbooks.Open(filePath, /*UpdateLinks*/ 0, /*ReadOnly*/ true,
+                Type.Missing, Type.Missing, Type.Missing, Type.Missing, Type.Missing,
+                Type.Missing, Type.Missing, Type.Missing, Type.Missing, Type.Missing,
+                /*AddToMru*/ false);
             ConfigurePageSetup(workbook, folderName, addHeaderFooter);
 
             var normalPdf = TempPdfPath("xl_normal");
@@ -206,7 +212,7 @@ public sealed class ExcelPrinter : IDisposable
     }
 
     private static string TempPdfPath(string tag) =>
-        Path.Combine(Path.GetTempPath(), $"pfi_{tag}_{Guid.NewGuid():N}.pdf");
+        AppTemp.FilePath(tag, ".pdf");
 
     private static string EscapeHeader(string text) => text.Replace("&", "&&");
 

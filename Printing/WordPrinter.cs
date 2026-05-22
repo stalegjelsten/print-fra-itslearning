@@ -16,6 +16,8 @@ public sealed class WordPrinter : IDisposable
     private const int WdExportDocumentContent = 0;
     private const int WdExportDocumentWithMarkup = 7;
     private const int WdExportCreateNoBookmarks = 0;
+    private const int MsoAutomationSecurityForceDisable = 3;
+    private const int WdAlertsNone = 0;
 
     private dynamic? _wordApp;
     private readonly string _printerName;
@@ -40,6 +42,8 @@ public sealed class WordPrinter : IDisposable
             ?? throw new InvalidOperationException("Microsoft Word er ikke installert.");
         _wordApp = Activator.CreateInstance(type)!;
         _wordApp!.Visible = false;
+        try { _wordApp.DisplayAlerts = WdAlertsNone; } catch { }
+        try { _wordApp.AutomationSecurity = MsoAutomationSecurityForceDisable; } catch { }
         try { _wordApp.ActivePrinter = _printerName; } catch { }
         return _wordApp;
     }
@@ -49,12 +53,12 @@ public sealed class WordPrinter : IDisposable
         var app = GetOrCreateApp();
         EnsureFileNotLocked(filePath);
 
-        var pdfPath = Path.Combine(Path.GetTempPath(), $"pfi_word_{Guid.NewGuid():N}.pdf");
+        var pdfPath = AppTemp.FilePath("word", ".pdf");
 
         dynamic? doc = null;
         try
         {
-            doc = app.Documents.Open(filePath);
+            doc = app.Documents.Open(filePath, ReadOnly: true, AddToRecentFiles: false);
             if (addHeaderFooter)
                 ApplyHeaderFooter(doc, folderName);
 
@@ -99,7 +103,7 @@ public sealed class WordPrinter : IDisposable
         dynamic? doc = null;
         try
         {
-            doc = app.Documents.Open(filePath);
+            doc = app.Documents.Open(filePath, ReadOnly: true, AddToRecentFiles: false);
 
             if (addHeaderFooter)
                 ApplyHeaderFooter(doc, folderName);

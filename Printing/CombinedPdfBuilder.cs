@@ -125,7 +125,7 @@ public sealed class CombinedPdfBuilder
                 }
             }
 
-            var outputPath = Path.Combine(Path.GetTempPath(), $"pfi_combined_{Guid.NewGuid():N}.pdf");
+            var outputPath = AppTemp.FilePath("combined", ".pdf");
             output.Save(outputPath);
             output.Dispose();
 
@@ -174,7 +174,7 @@ public sealed class CombinedPdfBuilder
                     }
                 }
                 // Ingen stempling — kopier PDF til temp slik at den blir ryddet opp likt
-                var copy = Path.Combine(Path.GetTempPath(), $"pfi_pdfcopy_{Guid.NewGuid():N}.pdf");
+                var copy = AppTemp.FilePath("pdfcopy", ".pdf");
                 File.Copy(file.FullName, copy, overwrite: true);
                 return copy;
 

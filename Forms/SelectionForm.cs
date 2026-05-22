@@ -509,6 +509,21 @@ public sealed class SelectionForm : Form
             };
             if (dlg.ShowDialog(this) != DialogResult.OK)
                 return;
+
+            if (IsPotentiallySharedPath(dlg.FileName))
+            {
+                var confirm = MessageBox.Show(this,
+                    "Den valgte plasseringen ser ut til å være en nettverks- eller sky-synkronisert mappe. " +
+                    "Den kombinerte PDF-en kan inneholde personopplysninger for mange elever.\n\n" +
+                    "Vil du lagre der likevel?",
+                    "Mulig delt lagringssted",
+                    MessageBoxButtons.YesNo,
+                    MessageBoxIcon.Warning,
+                    MessageBoxDefaultButton.Button2);
+                if (confirm != DialogResult.Yes)
+                    return;
+            }
+
             savePath = dlg.FileName;
         }
 
@@ -613,5 +628,35 @@ public sealed class SelectionForm : Form
         if (string.IsNullOrWhiteSpace(selected)) return;
         _config.Printer = selected.Trim();
         _config.Save();
+    }
+
+    private static bool IsPotentiallySharedPath(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path)) return false;
+
+        try
+        {
+            var fullPath = Path.GetFullPath(path);
+            if (fullPath.StartsWith(@"\\", StringComparison.Ordinal)) return true;
+
+            var segments = fullPath.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            foreach (var segment in segments)
+            {
+                if (segment.Contains("OneDrive", StringComparison.OrdinalIgnoreCase) ||
+                    segment.Contains("SharePoint", StringComparison.OrdinalIgnoreCase) ||
+                    segment.Contains("Dropbox", StringComparison.OrdinalIgnoreCase) ||
+                    segment.Contains("Google Drive", StringComparison.OrdinalIgnoreCase) ||
+                    segment.Contains("iCloudDrive", StringComparison.OrdinalIgnoreCase) ||
+                    segment.Contains("iCloud Drive", StringComparison.OrdinalIgnoreCase) ||
+                    segment.Contains("Teams", StringComparison.OrdinalIgnoreCase))
+                    return true;
+            }
+        }
+        catch
+        {
+            return false;
+        }
+
+        return false;
     }
 }

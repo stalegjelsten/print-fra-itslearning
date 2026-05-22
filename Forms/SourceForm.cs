@@ -82,6 +82,8 @@ public sealed class SourceForm : Form
 
     private async Task CheckForUpdatesAsync()
     {
+        if (!_config.CheckForUpdates) return;
+
         try
         {
             var info = await UpdateChecker.CheckAsync();
