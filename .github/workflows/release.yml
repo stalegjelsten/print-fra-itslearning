@@ -27,6 +27,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.inputs.tag || github.ref }}
+          fetch-tags: true
 
       - name: Setup .NET 10
         uses: actions/setup-dotnet@v4
@@ -83,8 +84,15 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ github.event.inputs.tag || github.ref_name }}
         run: |
-          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 \
-            || gh release create "$TAG" --title "$TAG" --notes-from-tag --repo "$GITHUB_REPOSITORY"
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            exit 0
+          fi
+          git fetch --tags --force origin >/dev/null 2>&1 || true
+          NOTES=$(git for-each-ref "refs/tags/$TAG" --format='%(contents)')
+          if [ -z "$NOTES" ]; then
+            NOTES="$TAG"
+          fi
+          gh release create "$TAG" --title "$TAG" --notes "$NOTES" --repo "$GITHUB_REPOSITORY"
 
       - name: Upload assets to release
         env:
