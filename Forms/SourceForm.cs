@@ -6,10 +6,15 @@ namespace PrintFraItslearning.Forms;
 
 public sealed class SourceForm : Form
 {
+    private const string DocumentationUrl =
+        "https://github.com/stalegjelsten/print-fra-itslearning/raw/main/docs/dokumentasjon.pdf";
+
     private readonly Config _config;
     private readonly Label _updateLabel;
+    private readonly Button _updateBtn;
     private readonly ToolTip _toolTip = new();
     private UpdateInfo? _updateInfo;
+    private bool _isCheckingForUpdates;
 
     public SourceForm(Config config)
     {
@@ -25,7 +30,7 @@ public sealed class SourceForm : Form
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = false;
         MinimizeBox = false;
-        ClientSize = new Size(520, 304);
+        ClientSize = new Size(520, 340);
 
         var introLabel = new Label
         {
@@ -72,10 +77,31 @@ public sealed class SourceForm : Form
         };
         Controls.Add(_updateLabel);
 
+        var helpBtn = new Button
+        {
+            Text = "Instruksjoner",
+            Location = new Point(24, 294),
+            Size = new Size(120, 32)
+        };
+        helpBtn.Click += (_, _) => OpenUrl(DocumentationUrl);
+        _toolTip.SetToolTip(helpBtn, "Åpne dokumentasjonen (PDF).");
+        Controls.Add(helpBtn);
+
+        _updateBtn = new Button
+        {
+            Text = "Oppdater",
+            Location = new Point(152, 294),
+            Size = new Size(120, 32)
+        };
+        _updateBtn.Click += async (_, _) => await ManualCheckForUpdatesAsync();
+        _toolTip.SetToolTip(_updateBtn,
+            $"Sjekk etter ny versjon. Gjeldende versjon: {UpdateChecker.CurrentVersion}");
+        Controls.Add(_updateBtn);
+
         var cancelBtn = new Button
         {
             Text = "Avslutt",
-            Location = new Point(412, 258),
+            Location = new Point(412, 294),
             Size = new Size(84, 32),
             DialogResult = DialogResult.Cancel
         };
@@ -94,16 +120,67 @@ public sealed class SourceForm : Form
 
         try
         {
-            var info = await UpdateChecker.CheckAsync();
-            if (info == null) return;
-            _updateInfo = info;
-            _updateLabel.Text = $"Ny versjon tilgjengelig ({info.LatestVersion}). Klikk for å åpne.";
-            _updateLabel.Visible = true;
+            var result = await UpdateChecker.CheckAsync();
+            if (result.Status != UpdateStatus.UpdateAvailable || result.Info == null) return;
+            ShowUpdateBanner(result.Info);
         }
         catch
         {
             // Stille feil
         }
+    }
+
+    private async Task ManualCheckForUpdatesAsync()
+    {
+        if (_isCheckingForUpdates) return;
+        _isCheckingForUpdates = true;
+        _updateBtn.Enabled = false;
+        UseWaitCursor = true;
+        try
+        {
+            var result = await UpdateChecker.CheckAsync();
+            switch (result.Status)
+            {
+                case UpdateStatus.UpdateAvailable when result.Info != null:
+                    ShowUpdateBanner(result.Info);
+                    var open = MessageBox.Show(this,
+                        $"Ny versjon {result.Info.LatestVersion} er tilgjengelig. " +
+                        $"Du har versjon {UpdateChecker.CurrentVersion}.\n\n" +
+                        "Vil du åpne nedlastingssiden nå?",
+                        "Oppdatering tilgjengelig",
+                        MessageBoxButtons.YesNo,
+                        MessageBoxIcon.Information);
+                    if (open == DialogResult.Yes) OpenUrl(result.Info.ReleaseUrl);
+                    break;
+                case UpdateStatus.UpToDate:
+                    MessageBox.Show(this,
+                        $"Du har siste versjon ({UpdateChecker.CurrentVersion}).",
+                        "Ingen oppdatering",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Information);
+                    break;
+                default:
+                    MessageBox.Show(this,
+                        "Kunne ikke kontakte GitHub. Sjekk nettforbindelsen og prøv igjen.",
+                        "Oppdateringssjekk feilet",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Warning);
+                    break;
+            }
+        }
+        finally
+        {
+            UseWaitCursor = false;
+            _updateBtn.Enabled = true;
+            _isCheckingForUpdates = false;
+        }
+    }
+
+    private void ShowUpdateBanner(UpdateInfo info)
+    {
+        _updateInfo = info;
+        _updateLabel.Text = $"Ny versjon tilgjengelig ({info.LatestVersion}). Klikk for å åpne.";
+        _updateLabel.Visible = true;
     }
 
     private static void OpenUrl(string url)

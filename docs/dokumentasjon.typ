@@ -71,7 +71,7 @@
 
 Dette programmet er laget for å gjøre det enkelt for lærere å skrive ut alle elevbesvarelsene fra itslearning på én gang. I stedet for å åpne og skrive ut hver besvarelse manuelt, kan du bruke dette programmet til å skrive ut alt automatisk -- gjerne med elevens navn i toppteksten og sidetall i bunnteksten på dokumentene.
 
-Programmet er en helt vanlig Windows-app som distribueres som én `.exe`-fil. Det krever ingen installer og ingen administratorrettigheter.
+Programmet er en helt vanlig Windows-app som distribueres som én `.exe`-fil. 
 
 = Hva programmet gjør
 
@@ -84,7 +84,7 @@ Word-dokumenter skrives ut som de er skrevet. Du kan velge å legge elevens navn
 Excel-filer skrives ut i liggende format med rutenett og rad-/kolonneoverskrifter (A, B, C... og 1, 2, 3...). Du kan velge å skrive ut to varianter av hver fil: én med beregnede verdier og én med formlene synlige.
 
 == PDF-filer (.pdf)
-PDF-filer skrives ut direkte uten å åpne Adobe Reader. Hvis du har valgt topptekst og bunntekst, blir disse stemplet inn på en midlertidig kopi av PDF-en før utskriften, slik at elevens navn også vises på PDF-utskrifter.
+PDF-filer skrives ut direkte via den innebygde PDF-motoren. Hvis du har valgt topptekst og bunntekst, blir disse stemplet inn på en midlertidig kopi av PDF-en før utskriften, slik at elevens navn også vises på PDF-utskrifter.
 
 == HTML-filer, bilder og tekstfiler
 For hver elev kombineres alle HTML-filer (.html, .htm), bilder (.jpg, .jpeg, .png, .gif, .bmp) og tekstfiler (.txt) til én midlertidig HTML-fil. Denne skrives ut via Word. Den midlertidige filen slettes automatisk etter utskrift.
@@ -132,7 +132,7 @@ Logg inn på itslearning og gå til oppgaven du vil skrive ut besvarelser fra.
 == Steg 2: Kjør utskriftsprogrammet
 
 + Dobbeltklikk på `PrintFraItslearning.exe`.
-+ I det første vinduet klikker du på enten *Velg ZIP-fil fra itslearning* eller *Velg mappe*, og velger fila/mappa. (Du kan også klikke *Avslutt* for å lukke programmet.)
++ I det første vinduet klikker du på enten *Velg ZIP-fil fra itslearning* eller *Velg mappe*, og velger fila/mappa. Nederst i vinduet finner du i tillegg knappene *Instruksjoner* (åpner denne dokumentasjonen), *Oppdater* (sjekker om det finnes en nyere versjon på GitHub) og *Avslutt*.
 + Programmet skanner filene og åpner et nytt vindu hvor du ser alle filene gruppert etter type, med en forhåndsvisning til høyre.
 + I dette vinduet kan du:
   - Velge *printer* fra nedtrekkslisten øverst (programmet henter automatisk alle installerte printere). Valget huskes til neste gang. Klikk på ↻-knappen for å oppdatere listen.
@@ -142,7 +142,8 @@ Logg inn på itslearning og gå til oppgaven du vil skrive ut besvarelser fra.
   - Slå av/på utskrift av *kommentarer* i Word-dokumenter.
   - Slå av/på *formelvisning* for Excel-filer.
   - Velge *Kombiner alle filer til én PDF og skriv ut som én jobb* (se under).
-  - Velge *sortering* fra nedtrekkslista. Standard er *Etternavn (fra mappenavn)*. Du kan også velge *Fornavn (fra mappenavn)* eller *Filnavn på utskrevet fil* hvis du vil at filene skal komme i alfabetisk rekkefølge etter filnavn i stedet for elevnavn.
+  - *Vis filer gruppert etter* (nedtrekksliste over filtreet, til høyre): velg hvordan lista *vises*. Standard er *Filtype* (Word, Excel, PDF, HTML/bilder hver for seg). *Elev (mappenavn)* viser i stedet alle filer fra hver elev samlet under elevens mappe. Dette påvirker *bare visningen* — ikke rekkefølgen ved utskrift.
+  - *Utskriftsrekkefølge* (i Utskriftsvalg-boksen): bestemmer rekkefølgen filene faktisk sendes til skriveren i. Standard er *Etternavn (fra mappenavn)*. Du kan også velge *Fornavn (fra mappenavn)* eller *Filnavn på utskrevet fil* hvis du vil at filene skal komme i alfabetisk rekkefølge etter filnavn i stedet for elevnavn.
 + Klikk *Start →* for å begynne. Programmet viser fremgang i et eget vindu med en logg som viser hver fil etter hvert som den skrives ut.
 
 == Kombinert PDF-modus
@@ -167,8 +168,6 @@ Programmet fungerer kun på Windows 10 eller nyere, og det krever:
 - *Microsoft Excel* -- for utskrift av Excel-filer.
 - *Visual C++ 2015-2022 Redistributable* -- vanligvis allerede installert; brukes av den innebygde PDF-motoren.
 
-PDF-utskrift krever *ikke* lenger Adobe Reader -- PDF-motoren er innebygd i programmet.
-
 = Endre innstillinger
 
 Programmet lagrer innstillinger i `%APPDATA%\PrintFraItslearning\config.ini`. Du finner mappa ved å lime inn `%APPDATA%\PrintFraItslearning` i adressefeltet i Filutforsker.
@@ -179,11 +178,13 @@ Innholdet i fila ser slik ut:
 printer=\\TDCSPRN30\Sikker_UtskriftCS
 margin_cm=2.0
 image_width_cm=17.0
+check_for_updates=false
 ```
 
 - *printer*: hvilken printer programmet sender utskriftene til. Kan også endres via dropdown-en i programmet.
 - *margin_cm*: sidemarger i centimeter (standard: 2.0 cm).
-- *image_width_cm*: maksimal bildebredde i centimeter (standard: 17.0 cm).
+- *image_width_cm*: maksimal bildebredde i centimeter (standard: 17.0 cm). Brukes når vi skriver ut HTML-filer og bilder som er limt inn i svarvinduet i itslearning.
+- *check_for_updates*: hvis `true`, sjekker programmet automatisk om det finnes en ny versjon ved oppstart og viser et banner hvis det er tilfelle (standard: `false`). Uansett kan du sjekke manuelt med *Oppdater*-knappen.
 
 = Feilsøking
 
@@ -193,25 +194,9 @@ Første gang du kjører fila kan Windows vise en advarsel om at programmet «ikk
 
 Hvis dette ikke fungerer (IT-policy kan blokkere usignerte programmer), kan du prøve å høyreklikke på exe-en → *Egenskaper* → huk av *«Fjern blokkering»* nederst → klikk *OK*.
 
-== Hvis Word- eller HTML-filer ikke skrives ut
-
-Kontroller at Microsoft Word er installert på datamaskinen.
-
-== Hvis Excel-filer ikke skrives ut
-
-Kontroller at Microsoft Excel er installert på datamaskinen.
-
 == Hvis PDF-filer gir feilmelding om manglende DLL
 
 PDF-motoren krever Visual C++ 2015-2022 Redistributable. Last ned og installer #link("https://aka.ms/vs/17/release/vc_redist.x64.exe")[Microsoft Visual C++ Redistributable (x64)] fra Microsoft.
-
-== Hvis printer-listen er tom
-
-Klikk på den runde pilen (↻) ved siden av printer-dropdown-en (øverst i utvalg-vinduet) for å hente listen på nytt.
-
-== Hvis forhåndsvisningen ikke vises
-
-PDF-er, bilder, HTML og tekstfiler får forhåndsvisning automatisk. Word- og Excel-filer er ikke støttet i forhåndsvisningen -- dobbeltklikk på fila i lista for å åpne den i Word eller Excel i stedet.
 
 = Kontakt og lisens
 

@@ -10,6 +10,8 @@ public sealed class SelectionForm : Form
 {
     private sealed record FileGroup(string Title);
 
+    private enum GroupingMode { FileType, Student }
+
     private readonly Config _config;
     private readonly string _rootPath;
     private readonly ZipExtractor? _zip;
@@ -27,6 +29,7 @@ public sealed class SelectionForm : Form
     private readonly CheckBox _combinePrintCheck;
     private readonly CheckBox _combineSaveCheck;
     private readonly ComboBox _sortCombo;
+    private readonly ComboBox _groupingCombo;
     private readonly Label _statusLabel;
     private readonly Button _printButton;
     private readonly Button _cancelButton;
@@ -35,6 +38,8 @@ public sealed class SelectionForm : Form
     private ScanResult? _scan;
     private CombinedHtmlResult? _combined;
     private List<ScannedFile> _printableFiles = new();
+    private readonly HashSet<string> _uncheckedFilePaths =
+        new(StringComparer.OrdinalIgnoreCase);
 
     public SelectionForm(Config config, string rootPath, ZipExtractor? zip)
     {
@@ -98,11 +103,37 @@ public sealed class SelectionForm : Form
         _statusLabel = new Label
         {
             Text = "Skanner…",
-            Location = new Point(16, 66),
-            Size = new Size(968, 22),
-            Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
+            Location = new Point(16, 70),
+            Size = new Size(520, 22),
+            Anchor = AnchorStyles.Top | AnchorStyles.Left
         };
         Controls.Add(_statusLabel);
+
+        var groupingLabel = new Label
+        {
+            Text = "Vis filer gruppert etter:",
+            Location = new Point(540, 68),
+            Size = new Size(212, 22),
+            Anchor = AnchorStyles.Top | AnchorStyles.Right,
+            TextAlign = ContentAlignment.MiddleRight
+        };
+        Controls.Add(groupingLabel);
+
+        _groupingCombo = new ComboBox
+        {
+            Location = new Point(758, 66),
+            Size = new Size(226, 24),
+            Anchor = AnchorStyles.Top | AnchorStyles.Right,
+            DropDownStyle = ComboBoxStyle.DropDownList
+        };
+        _groupingCombo.Items.AddRange(new object[]
+        {
+            "Filtype",
+            "Elev (mappenavn)"
+        });
+        _groupingCombo.SelectedIndex = 0;
+        _groupingCombo.SelectedIndexChanged += (_, _) => RepopulateTreePreservingChecks();
+        Controls.Add(_groupingCombo);
 
         _tree = new TreeView
         {
@@ -254,7 +285,7 @@ public sealed class SelectionForm : Form
 
         var sortLabel = new Label
         {
-            Text = "Sortering:",
+            Text = "Utskriftsrekkefølge:",
             Location = new Point(14, 104),
             AutoSize = true,
             Anchor = AnchorStyles.Top | AnchorStyles.Left
@@ -263,8 +294,8 @@ public sealed class SelectionForm : Form
 
         _sortCombo = new ComboBox
         {
-            Location = new Point(86, 100),
-            Size = new Size(372, 24),
+            Location = new Point(146, 100),
+            Size = new Size(312, 24),
             Anchor = AnchorStyles.Top | AnchorStyles.Left,
             DropDownStyle = ComboBoxStyle.DropDownList
         };
@@ -321,7 +352,11 @@ public sealed class SelectionForm : Form
         _toolTip.SetToolTip(_combineSaveCheck,
             "Lagrer den kombinerte PDF-en til en fil du velger.");
         _toolTip.SetToolTip(_sortCombo,
-            "Velg rekkefølgen filene sendes til utskrift i.");
+            "Bestemmer rekkefølgen filene faktisk sendes til skriveren i. " +
+            "Påvirker ikke hvordan lista vises i vinduet.");
+        _toolTip.SetToolTip(_groupingCombo,
+            "Bestemmer kun hvordan fillista vises i dette vinduet — " +
+            "etter filtype eller samlet per elev. Påvirker ikke utskriftsrekkefølgen.");
 
         ResumeLayout(performLayout: true);
 
@@ -382,39 +417,103 @@ public sealed class SelectionForm : Form
         _tree.BeginUpdate();
         _tree.Nodes.Clear();
 
-        var wordFiles = _printableFiles.Where(f => f.Kind == FileKind.Word).ToList();
-        var excelFiles = _printableFiles.Where(f => f.Kind == FileKind.Excel).ToList();
-        var pdfFiles = _printableFiles.Where(f => f.Kind == FileKind.Pdf).ToList();
-        var htmlFiles = _printableFiles.Where(f => f.Kind == FileKind.Html).ToList();
-
-        AddGroup($"Word-filer ({wordFiles.Count})", wordFiles);
-        AddGroup($"Excel-filer ({excelFiles.Count})", excelFiles);
-        AddGroup($"PDF-filer ({pdfFiles.Count})", pdfFiles);
-        AddGroup($"HTML/bilder ({htmlFiles.Count})", htmlFiles);
+        var mode = SelectedGroupingMode();
+        if (mode == GroupingMode.Student)
+            PopulateTreeByStudent();
+        else
+            PopulateTreeByFileType();
 
         foreach (TreeNode node in _tree.Nodes)
             node.Expand();
 
         _tree.EndUpdate();
 
-        _commentsCheck.Visible = wordFiles.Count > 0;
-        _excelFormulasCheck.Visible = excelFiles.Count > 0;
+        _commentsCheck.Visible = _printableFiles.Any(f => f.Kind == FileKind.Word);
+        _excelFormulasCheck.Visible = _printableFiles.Any(f => f.Kind == FileKind.Excel);
         _headerFooterCheck.Visible = _printableFiles.Count > 0;
         UpdateSelectionUi();
     }
 
-    private void AddGroup(string title, List<ScannedFile> files)
+    private void PopulateTreeByFileType()
+    {
+        var wordFiles = _printableFiles.Where(f => f.Kind == FileKind.Word).ToList();
+        var excelFiles = _printableFiles.Where(f => f.Kind == FileKind.Excel).ToList();
+        var pdfFiles = _printableFiles.Where(f => f.Kind == FileKind.Pdf).ToList();
+        var htmlFiles = _printableFiles.Where(f => f.Kind == FileKind.Html).ToList();
+
+        AddGroup($"Word-filer ({wordFiles.Count})", wordFiles, showFolder: true);
+        AddGroup($"Excel-filer ({excelFiles.Count})", excelFiles, showFolder: true);
+        AddGroup($"PDF-filer ({pdfFiles.Count})", pdfFiles, showFolder: true);
+        AddGroup($"HTML/bilder ({htmlFiles.Count})", htmlFiles, showFolder: true);
+    }
+
+    private void PopulateTreeByStudent()
+    {
+        var groups = _printableFiles
+            .GroupBy(f => string.IsNullOrWhiteSpace(f.FolderName) ? "(uten mappe)" : f.FolderName,
+                     StringComparer.OrdinalIgnoreCase)
+            .OrderBy(g => StudentGroupSortKey(g.Key), StringComparer.OrdinalIgnoreCase);
+
+        foreach (var g in groups)
+        {
+            var files = g
+                .OrderBy(f => SortBucket(f.Kind))
+                .ThenBy(f => f.Name, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+            var displayName = StudentGroupDisplayName(g.Key);
+            AddGroup($"{displayName} ({files.Count})", files, showFolder: false);
+        }
+    }
+
+    private static string StudentGroupSortKey(string folderName)
+    {
+        var s = StudentName.TryParse(folderName);
+        return s == null ? folderName : $"{s.Etternavn} {s.Fornavn}";
+    }
+
+    private static string StudentGroupDisplayName(string folderName)
+    {
+        var s = StudentName.TryParse(folderName);
+        return s == null ? folderName : $"{s.Etternavn}, {s.Fornavn}";
+    }
+
+    private void RepopulateTreePreservingChecks()
+    {
+        if (_scan == null) return;
+        CaptureUncheckedFiles();
+        PopulateTree();
+    }
+
+    private void CaptureUncheckedFiles()
+    {
+        _uncheckedFilePaths.Clear();
+        foreach (TreeNode group in _tree.Nodes)
+        {
+            foreach (TreeNode child in group.Nodes)
+            {
+                if (child.Tag is ScannedFile sf && !child.Checked)
+                    _uncheckedFilePaths.Add(sf.FullName);
+            }
+        }
+    }
+
+    private void AddGroup(string title, List<ScannedFile> files, bool showFolder)
     {
         if (files.Count == 0) return;
-        var groupNode = new TreeNode(title) { Checked = true, Tag = new FileGroup(title) };
+        var groupNode = new TreeNode(title) { Tag = new FileGroup(title) };
         foreach (var f in files)
         {
-            var label = $"{f.Name}   [{f.FolderName}]";
-            var node = new TreeNode(label) { Checked = true, Tag = f };
+            var label = showFolder ? $"{f.Name}   [{f.FolderName}]" : f.Name;
+            var checkedState = !_uncheckedFilePaths.Contains(f.FullName);
+            var node = new TreeNode(label) { Checked = checkedState, Tag = f };
             groupNode.Nodes.Add(node);
         }
+        groupNode.Checked = groupNode.Nodes.Cast<TreeNode>().All(n => n.Checked);
         _tree.Nodes.Add(groupNode);
     }
+
+    private GroupingMode SelectedGroupingMode() =>
+        _groupingCombo.SelectedIndex == 1 ? GroupingMode.Student : GroupingMode.FileType;
 
     private bool _suppressCheckEvent;
 
