@@ -35,9 +35,13 @@ jobs:
           dotnet-version: '10.0.x'
 
       - name: Setup Typst
-        uses: typst-community/setup-typst@v4
-        with:
-          typst-version: latest
+        env:
+          TYPST_VERSION: '0.14.2'
+        run: |
+          curl -fsSL "https://github.com/typst/typst/releases/download/v${TYPST_VERSION}/typst-x86_64-unknown-linux-musl.tar.xz" \
+            | tar -xJ
+          sudo install -m 0755 "typst-x86_64-unknown-linux-musl/typst" /usr/local/bin/typst
+          typst --version
 
       - name: Download Libertinus fonts
         run: |
